@@ -1,4 +1,5 @@
 from openai import OpenAI
+import openai
 from pydantic import BaseModel
 from abc import ABC, abstractmethod
 from typing import Any, Protocol, List, Dict
@@ -70,9 +71,13 @@ class LLamaModelLoader:
 
 class GPTModel(BaseLLMModel):
     @override
-    def generate(self, model_name: str = "gpt-4o-mini", messages: List[Dict[str]] | None = None, structure: ABC | None = None, ) -> str:
+    def generate(self, model_name: str = "gpt-4o-mini", messages: List[Dict[str, str]] | None = None, structure: BaseModel | None = None, tools: List[callable] | None = None) -> str:
         # try:
-
+        class get_result_sum(BaseModel):
+            sum: float
+        tools = [openai.pydantic_function_tool(get_result_sum)]
+        print(tools)
+        breakpoint()
         if structure:
             completion = self._model.beta.chat.completions.parse(
             model=model_name,
@@ -80,12 +85,14 @@ class GPTModel(BaseLLMModel):
             response_format=structure
         )
         else:
-            completion = self._model.beta.chat.completions.parse(
-                model=model_name,
+            completion = self._model.chat.completions.create(
+                model="gpt-4o-mini",
                 messages=messages,
+                tools=tools,
+                tool_choice="required"
             )
             
-        return completion.choices[0].message.content
+        return completion.choices[0].message#.content
         # except Exception as e:
         #     return f"Error: {str(e)}"
 
@@ -112,14 +119,10 @@ class LLMFactory:
             return LLamaModel(loader)
         else:
             raise ValueError(f"Unsupported model type: {model_type}")
+        
 
-if __name__ == "__main__":
-    # Create a factory instance
-    load_dotenv()
-    factory = LLMFactory()
-    # Create a GPT model
-    gpt_model = factory.create_model("gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
-    print(gpt_model.generate())
+class Message(BaseModel):
+    message: str
 
-
-
+class History(BaseModel):
+    messages: List[Message]
