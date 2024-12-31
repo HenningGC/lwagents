@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
 from tools import Tool
+from abc import ABC, abstractmethod
 from typing_extensions import Self, override
 import json
 
@@ -23,15 +23,10 @@ class Agent(ABC):
 class LLMAgent(Agent):
     def __init__(self, llm_model, tools):
         super().__init__(tools)
-        self.llm_model = llm_model  # E.g., OpenAI, Hugging Face
+        self.llm_model = llm_model
 
     @override
     def action(self, prompt: str):
-        # Use the LLM to decide the next action
-        prompt =[
-            {"role": "system", "content": "You are an helpful assistant"},
-            {"role": "user", "content": f"{prompt}"},
-            ]
         response = self.llm_model.generate(messages=prompt, tools = self.tools)
         tool_calls = response.tool_calls
         if tool_calls:
@@ -39,7 +34,6 @@ class LLMAgent(Agent):
                 function_name = tool_call.function.name
                 function_to_call = self.tools[function_name]
                 function_args = json.loads(tool_call.function.arguments)
-                breakpoint()
                 if function_args:
                     function_response = function_to_call.execute(function_args)
                 else:
@@ -52,4 +46,4 @@ class LLMAgent(Agent):
                         }
                 return response
                 
-        return response.content  # Example: "Move to node X"
+        return response.content

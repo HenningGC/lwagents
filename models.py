@@ -85,7 +85,7 @@ class GPTModel(BaseLLMModel):
         """
         # try:
         if tools and structure:
-            raise Warning("Tool calling and structured output are incompatible!")
+            raise Warning("Tool calling with structured output is currently incompatible!")
         
         openai_tools = []
         
@@ -138,8 +138,11 @@ class LLMFactory:
             raise ValueError(f"Unsupported model type: {model_type}")
         
 
-class Message(BaseModel):
+class BaseMessage(BaseModel):
     message: str
 
+class GPTMessage(BaseMessage):
+    pass
+
 class History(BaseModel):
-    messages: List[Message]
+    messages: List[BaseMessage]

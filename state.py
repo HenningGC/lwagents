@@ -1,4 +1,4 @@
-from models import Message, History
+#from models import Message, History
 from agent import Agent, InvalidAgent
 from typing import TypedDict, Annotated, Sequence, List, Optional
 from typing_extensions import Self, override
@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 # Abstract Base Class
 class State(ABC):
     @abstractmethod
-    def add_message(self, message: "Message") -> None:
+    def update_state(self, action: str) -> None:
         pass
 
     @property
@@ -39,8 +39,8 @@ class MainState(State):
                 f"Agent {agent} must be of type Agent, got {type(agent)} instead."
             )
 
-    def add_message(self, message: "Message") -> None:
-        self.history.append(message)
+    def update_state(self, action: str) -> None:
+        self.history.append(action)
 
 
         

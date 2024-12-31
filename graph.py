@@ -1,18 +1,46 @@
 from state import MainState
 from agent import LLMAgent
-from models import Message
 from dataclasses import dataclass
-from pydantic import BaseModel, Field, SecretStr
-from typing import Literal, Optional, Dict, List, Optional, Tuple
+from pydantic import BaseModel, Field, SkipValidation
+from typing import Literal, Optional, Dict, List, Optional, Tuple, Any
+from typing_extensions import Self, override
+from enum import Enum
+
+class NodeKind(str, Enum):
+    START = "START"
+    STATE = "STATE"
+    TERMINAL = "TERMINAL"
 
 class Node(BaseModel):
     node_name: str = Field(..., description="The Node Name")
-    kind: Literal["START", "STATE", "TERMINAL"] = Field(..., description="The kind of the Node")
-    command: Optional[function] = Field(..., description="The function to run")
+    kind: NodeKind = Field(..., description="The kind of the Node")
+    command: Optional[callable] = None
+    parameters: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Parameters for the command")
+
+    def connect(self, to_node: Self, edge: 'Edge', graph: 'Graph'):
+        """
+        Connects this node to another node using the given edge.
+
+        Args:
+            to_node (Node): The destination node.
+            edge (Edge): The edge connecting the nodes.
+            graph (Graph): The graph to which the connection belongs.
+        """
+        graph.connect_edge(FROM=self, TO=to_node, WITH=edge)
+
+    class Config:
+        arbitrary_types_allowed = True
+        frozen = True
+
 
 class Edge(BaseModel):
     edge_name: str = Field(..., description="The Edge Name")
-    condition: Optional[function] = Field(..., description="Established Condition")
+    condition: Optional[callable] = Field(None, description="A function that determines if the transition is valid")
+    parameters: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Parameters for the function")
+
+    class Config:
+        arbitrary_types_allowed = True
+        frozen=True
 
 class GraphException(Exception):
     pass
@@ -28,12 +56,29 @@ class Graph:
         self._MainState = MainState(None)
 
     def connect_edge(self, FROM: Node, TO: Node, WITH: Edge):
-        if self._graphDict[FROM]:
-            self._graphDict[FROM].append({TO,WITH})
-        else:
-            self._graphDict[FROM] = [{TO,WITH}]
+        """
+        Connects two nodes with an edge in the graph.
 
-    from typing import Dict, List, Tuple
+        Args:
+            FROM (Node): The starting node.
+            TO (Node): The destination node.
+            WITH (Edge): The edge connecting the nodes.
+        """
+        if FROM not in self._graphDict:
+            self._graphDict[FROM] = []
+        self._graphDict[FROM].append((TO, WITH))
+
+    def get_edges(self, node: Node) -> List[Tuple[Node, Edge]]:
+        """
+        Retrieves edges connected to the given node.
+
+        Args:
+            node (Node): The node to query.
+
+        Returns:
+            List[Tuple[Node, Edge]]: A list of connected nodes and their edges.
+        """
+        return self._graphDict.get(node, [])
 
     def construct_graph(self, graph_dict: Dict['Node', List[Dict['Node', 'Edge']]], start_name: str, *args, **kwargs):
         """
@@ -80,27 +125,33 @@ class Graph:
             # Store the processed edges in the graph's internal dictionary
             self._graphDict[node] = [(connected_node, edge_obj) for edge in edges for connected_node, edge_obj in edge.items()]
 
-
+    @override
     def run(self, start_node, *args, **kwargs):
-        
+        print("Executing Graph...")
         if start_node.kind != "START":
             raise GraphException(f"Chosen starting Node: {start_node} is not of type START")
         
         current_node = start_node
 
         while current_node.kind != "TERMINAL" or current_node != None:
+            
+            result = None
+            if current_node.command:
+                result = current_node.command(**current_node.parameters)
 
-            if current_node:
-                result = LLMAgent.run_command(current_node.command)
+            self._MainState.update_state(str(result))
 
-                self._MainState.add_message(Message(result))
+            next_node = None
+            for connected_node, edge in self._graphDict.get(current_node, []):
+                if edge.run():  # Execute the edge's function
+                    next_node = connected_node
+                    break
 
-                next_edge = current_node[result]
+            if not next_node:
+                raise GraphException(f"No valid transition from node: {current_node.node_name}")
 
-                if next_edge.condition:
-                    result = next_edge.condition
-
-                current_node = current_node[result]
+            # Transition to the next node
+            current_node = next_node
 
 
 
