@@ -30,7 +30,10 @@ class Node(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-        frozen = True
+
+    def __hash__(self):
+        # Use a tuple of the field values to generate a hash
+        return hash((self.node_name, self.kind))
 
 
 class Edge(BaseModel):
@@ -40,7 +43,6 @@ class Edge(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-        frozen=True
 
 class GraphException(Exception):
     pass
