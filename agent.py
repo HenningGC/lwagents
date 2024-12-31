@@ -40,12 +40,16 @@ class LLMAgent(Agent):
                 function_to_call = self.tools[function_name]
                 function_args = json.loads(tool_call.function.arguments)
                 breakpoint()
-                function_response = function_to_call.execute(function_args)
+                if function_args:
+                    function_response = function_to_call.execute(function_args)
+                else:
+                    function_response = function_to_call.execute()
                 response = {
                             "tool_call_id": tool_call.id,
                             "role": "tool",
                             "name": function_name,
                             "content": function_response,
                         }
+                return response
                 
-        return response  # Example: "Move to node X"
+        return response.content  # Example: "Move to node X"

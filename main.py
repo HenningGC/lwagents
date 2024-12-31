@@ -7,7 +7,7 @@ import os
 
 
 @Tool
-def get_result_sum(sum):
+def get_result_sum():
     return 5/342
 
 def test(current_state, agent):
@@ -27,8 +27,6 @@ if __name__ == "__main__":
     gpt_model = factory.create_model("gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
 
     currentState = MainState()
-
     agent = LLMAgent(llm_model= gpt_model, tools = [get_result_sum])
-
     print(test(current_state=currentState, agent=agent))
 

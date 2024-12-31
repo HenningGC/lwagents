@@ -71,13 +71,30 @@ class LLamaModelLoader:
 
 class GPTModel(BaseLLMModel):
     @override
-    def generate(self, model_name: str = "gpt-4o-mini", messages: List[Dict[str, str]] | None = None, structure: BaseModel | None = None, tools: List[callable] | None = None) -> str:
+    def generate(self, model_name: str = "gpt-4o-mini", messages: List[Dict[str, str]] | None = None, structure: BaseModel | None = None, tools: Dict[str,callable] | None = None) -> str:
+        """
+        Generates a response using the LLM, dynamically integrating tools.
+        
+        Args:
+            model_name (str): The name of the LLM model.
+            messages (List[Dict[str, str]]): The conversation messages.
+            tools (List[BaseTool]): A list of tools to integrate into the LLM.
+
+        Returns:
+            str: The model's response or tool execution result.
+        """
         # try:
-        class get_result_sum(BaseModel):
-            sum: float
-        tools = [openai.pydantic_function_tool(get_result_sum)]
-        print(tools)
-        breakpoint()
+        if tools and structure:
+            raise Warning("Tool calling and structured output are incompatible!")
+        
+        openai_tools = []
+        
+        for tool in tools or []:
+            func = tools[tool]
+            tool_schema = func.schema
+            openai_tool = openai.pydantic_function_tool(tool_schema)
+            openai_tools.append(openai_tool)
+            
         if structure:
             completion = self._model.beta.chat.completions.parse(
             model=model_name,
@@ -88,7 +105,7 @@ class GPTModel(BaseLLMModel):
             completion = self._model.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
-                tools=tools,
+                tools=openai_tools,
                 tool_choice="required"
             )
             
