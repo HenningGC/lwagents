@@ -1,4 +1,4 @@
-from tools import Tool
+from .tools import Tool
 from abc import ABC, abstractmethod
 from typing_extensions import Self, override
 import json
