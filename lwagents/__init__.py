@@ -1,4 +1,4 @@
-from .graph import Graph, Node, Edge, direct_traversal
+from .graph import Graph, Node, Edge, node_router, DirectTraversal
 from .state import MainState
 from .agent import LLMAgent
 from .tools import Tool
@@ -11,6 +11,7 @@ __all__ = [
     "MainState",
     "LLMAgent",
     "Tool",
-    "direct_traversal",
+    "node_router",
+    "DirectTraversal",
     "LLMFactory",
 ]
