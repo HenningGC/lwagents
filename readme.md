@@ -47,7 +47,7 @@ To install the library from source:
 
 Clone the repository:
 ```
-git clone https://github.com/yourusername/lwagents.git
+git clone https://github.com/HenningGC/lwagents.git
 ```
 Navigate to the project directory:
 ```
