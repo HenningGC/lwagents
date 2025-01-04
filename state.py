@@ -6,6 +6,9 @@ from abc import ABC, abstractmethod
 
 # Abstract Base Class
 class State(ABC):
+    def __init__(self):
+        self.history = None
+
     @abstractmethod
     def update_state(self, action: str) -> None:
         pass
@@ -19,6 +22,27 @@ class State(ABC):
     @abstractmethod
     def current_agent(self, agent: "Agent") -> None:
         pass
+
+    def print_history(self) -> None:
+        """
+        Prints the State execution history in a more human-readable format.
+
+        Args:
+            history (list): The history log from the graph's execution.
+        """
+        print("\State Execution History")
+        print("=" * 50)
+        for step in self.history:
+            print(f"Step {step['step_number']}:")
+            print(f"  Node Name     : {step['node_name']}")
+            print(f"  Node Kind     : {step['node_kind'].name}")
+            print(f"  Command Result: {step['command_result']}")
+            if step['transition']:
+                edge_name, next_node = step['transition']
+                print(f"  Transition    : via Edge '{edge_name}' to Node '{next_node}'")
+            else:
+                print("  Transition    : None")
+            print("-" * 50)
 
 # Concrete Implementation
 class MainState(State):
