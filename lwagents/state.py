@@ -1,5 +1,5 @@
 #from models import Message, History
-from agent import Agent, InvalidAgent
+from .agent import Agent, InvalidAgent
 from typing import TypedDict, Annotated, Sequence, List, Optional
 from typing_extensions import Self, override
 from abc import ABC, abstractmethod
