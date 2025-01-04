@@ -26,6 +26,14 @@ def print_val(val):
     print(val)
     return
 
+def test_condition(state):
+    state_history = state.history
+
+    if 'tool_call_id' in state_history[0]:
+        return True
+
+    return False
+
 if __name__ == "__main__":
     # Create a factory instance
     load_dotenv()
@@ -54,11 +62,12 @@ if __name__ == "__main__":
 
     edge1 = Edge(edge_name="edge1", condition=None)
     edge2 = Edge(edge_name="edge2", condition=None)
+    edge_c = Edge(edge_name="edge_w_condition", condition=test_condition, parameters={"state":currentState})
 
     graph = Graph()
 
-    supervisor_node.connect(to_node=test_node, edge=edge1, graph=graph)
+    supervisor_node.connect(to_node=test_node, edge=edge_c, graph=graph)
     test_node.connect(to_node=terminal_node, edge=edge2, graph=graph)
 
-    graph.run(start_node=supervisor_node)
+    graph.run(start_node=supervisor_node, streaming=True)
 
