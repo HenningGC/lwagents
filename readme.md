@@ -1,3 +1,5 @@
+![image](https://github.com/user-attachments/assets/939a7ad6-f572-4abf-a3db-12030d670ef0)
+
 # LWAgents: A Library for Graph-Driven AI Agents with Tool Integration
 
 **LWAgents** is a flexible and extensible Python library designed for building graph-driven workflows powered by AI agents. It provides a robust framework for creating, managing, and executing workflows where nodes represent states or tasks, edges represent transitions, and AI agents or deterministic logic decide the next steps.
