@@ -50,9 +50,9 @@ class GraphException(Exception):
 @dataclass
 class Graph:
 
-    def __init__(self):
+    def __init__(self, state):
         self._graphDict = {}
-        self._MainState = MainState(None)
+        self._MainState = state or MainState(None)
 
     def connect_edge(self, FROM: Node, TO: Node, WITH: Edge):
         """
@@ -128,62 +128,84 @@ class Graph:
 
     @override
     def run(self, start_node, streaming=False, *args, **kwargs):
+        """
+        Executes the graph starting from the given start_node, with structured logging for each step.
+
+        Args:
+            start_node (Node): The starting node of the graph.
+            streaming (bool): If True, print execution details in real-time.
+
+        Raises:
+            GraphException: If no valid transition is found or if conditions return non-boolean values.
+        """
         if streaming:
             print("Executing Graph...")
-        if start_node.kind != "START":
-            raise GraphException(f"Chosen starting Node: {start_node} is not of type START")
-        
-        current_node = start_node
 
-        while current_node.kind != "TERMINAL" and current_node != None:
+        if start_node.kind != "START":
+            raise GraphException(f"Chosen starting Node: {start_node.node_name} is not of type START")
+
+        current_node = start_node
+        step_number = 1 
+
+        while current_node.kind != "TERMINAL" and current_node is not None:
             if streaming:
-                print("Current_Node:", current_node.node_name, "Kind:",current_node.kind)
+                print(f"Current_Node: {current_node.node_name}, Kind: {current_node.kind}")
+
             result = None
             if current_node.command:
                 result = current_node.command(**current_node.parameters)
                 if streaming:
-                    print(f"{current_node.node_name} executed its commands\nResult: {result}")
-            
-            self._MainState.update_state(result)
+                    print(f"{current_node.node_name} executed its command. Result: {result}")
+
+            log_entry = {
+                "step_number": step_number,
+                "node_name": current_node.node_name,
+                "node_kind": current_node.kind,
+                "command_result": result,
+                "transition": None 
+            }
+
+            self._MainState.update_state(log_entry)
+
             if streaming:
-                print("State Global History",self._MainState.history)
+                print("State Global History", self._MainState.history)
 
             next_node = None
             for connected_node, edge in self._graphDict.get(current_node, []):
                 if edge.condition:
                     if streaming:
-                        print(f"Executing {edge.edge_name} condition {edge.condition}")
-                    if edge.parameters:  # Execute the edge's function
-                        edge_result = edge.condition(**edge.parameters)
-                        if streaming:
-                            print(f"Edge {edge.edge_name} ran condition {edge.condition} and returned {edge_result}")
-                        if not isinstance(edge_result, bool):
-                            raise GraphException("Edge condition must return a Bool")
-                        if edge_result==True:
-                            next_node = connected_node
-                            break
-                    else:
-                        edge_result = edge.condition()
-                        if streaming:
-                            print(f"Edge {edge.edge_name} ran condition {edge.condition} and returned {edge_result}")
-                        if edge_result==True:
-                            next_node = connected_node
-                            break
+                        print(f"Executing edge condition on {edge.edge_name}")
+                    edge_result = edge.condition(**edge.parameters) if edge.parameters else edge.condition()
+
+                    if streaming:
+                        print(f"Edge {edge.edge_name} condition returned {edge_result}")
+
+                    if not isinstance(edge_result, bool):
+                        raise GraphException("Edge condition must return a Bool")
+
+                    if edge_result:
+                        next_node = connected_node
+                        log_entry["transition"] = (edge.edge_name, connected_node.node_name)
+                        break
                 else:
                     next_node = connected_node
+                    log_entry["transition"] = (edge.edge_name, connected_node.node_name)
                     break
+
             if streaming:
                 if next_node:
-                    print(f"Traversing to Node: {next_node.node_name} through {edge.edge_name}")
+                    print(f"Traversing to Node: {next_node.node_name} through Edge: {edge.edge_name}")
 
             if not next_node:
                 raise GraphException(f"No valid transition from node: {current_node.node_name}")
 
-            # Transition to the next node
             current_node = next_node
+            step_number += 1
+
         if streaming:
             print("Finished Graph Run")
             print(self._MainState.history)
+
 
 
 
