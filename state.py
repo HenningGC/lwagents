@@ -24,7 +24,8 @@ class State(ABC):
 class MainState(State):
     def __init__(self, messages: Optional[List] = []):
         self._agent = None
-        self.history = messages
+        self.history = messages or []
+        self.last_update = None
 
     @property
     def current_agent(self) -> Optional["Agent"]:
@@ -39,8 +40,9 @@ class MainState(State):
                 f"Agent {agent} must be of type Agent, got {type(agent)} instead."
             )
 
-    def update_state(self, action: str) -> None:
-        self.history.append(action)
+    def update_state(self, log: str) -> None:
+        self.history.append(log)
+        self.last_update = log
 
 
         

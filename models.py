@@ -86,14 +86,13 @@ class GPTModel(BaseLLMModel):
         # try:
         if tools and structure:
             raise Warning("Tool calling with structured output is currently incompatible!")
-        
         openai_tools = []
-        
-        for tool in tools or []:
-            func = tools[tool]
-            tool_schema = func.schema
-            openai_tool = openai.pydantic_function_tool(tool_schema)
-            openai_tools.append(openai_tool)
+        if tools:
+            for tool in tools or []:
+                func = tools[tool]
+                tool_schema = func.schema
+                openai_tool = openai.pydantic_function_tool(tool_schema)
+                openai_tools.append(openai_tool)
             
         if structure:
             completion = self._model.beta.chat.completions.parse(
@@ -102,12 +101,19 @@ class GPTModel(BaseLLMModel):
             response_format=structure
         )
         else:
-            completion = self._model.chat.completions.create(
+            if tools:
+                completion = self._model.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=messages,
+                    tools=openai_tools,
+                    tool_choice="required"
+                )
+
+            else:
+                completion = self._model.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=messages,
-                tools=openai_tools,
-                tool_choice="required"
-            )
+                messages=messages)
+
             
         return completion.choices[0].message#.content
         # except Exception as e:

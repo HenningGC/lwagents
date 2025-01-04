@@ -8,7 +8,9 @@ class InvalidAgent(Exception):
 
 class Agent(ABC):
     def __init__(self, tools: list[Tool]):
-        self.tools = {type(tool).__name__: tool for tool in tools}
+        self.tools = None
+        if tools:
+            self.tools = {type(tool).__name__: tool for tool in tools}
 
     @abstractmethod
     def action(self, current_node: str):
@@ -21,7 +23,7 @@ class Agent(ABC):
         raise ValueError(f"Tool {tool_name} not found!")
 
 class LLMAgent(Agent):
-    def __init__(self, llm_model, tools):
+    def __init__(self, llm_model, tools=None):
         super().__init__(tools)
         self.llm_model = llm_model
 

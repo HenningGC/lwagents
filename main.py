@@ -11,12 +11,14 @@ import os
 def get_result_sum():
     return 5/342
 
-# Acts as a node
-def test(current_state, agent):
-    prompt =[{"role": "system", "content": "You are a helpful assistant. Use the supplied tools to assist the user."},
-     {"role": "user", "content": "Use the get_result_sum function at your disposal"}]
+def get_test_sum():
+    return 5+10
+
+@node_router
+def test_router(agent):
+    prompt =[{"role": "system", "content": "You are an agent router and you decide which node to travel to next based on the task and results thus far. Your next answer must only return the node name."},
+     {"role": "user", "content": "I want you to travel to testSum node"}]
     result = agent.action(prompt = prompt)
-    current_state.update_state(result)
 
     return result
 
@@ -26,40 +28,46 @@ def print_val(val):
     print(val)
     return
 
+def test_condition(state):
+    state_history = state.history
+    if 'tool_call_id' in state_history[0]['command_result']:
+        return True
+
+    return False
+
 if __name__ == "__main__":
     # Create a factory instance
-    # load_dotenv()
+    load_dotenv()
     factory = LLMFactory()
     # Create a GPT model
     gpt_model = factory.create_model("gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
 
-    currentState = MainState()
-    agent = LLMAgent(llm_model= gpt_model, tools = [get_result_sum])
+    MainState = MainState([])
+    tool_agent = LLMAgent(llm_model= gpt_model, tools = [get_result_sum])
+    router_agent = LLMAgent(llm_model= gpt_model)
 
 
     supervisor_node = Node(node_name='supervisor',
                            kind='START',
-                           command=test,
-                           parameters={"current_state":currentState,
-                                       "agent": agent})
+                           command=test_router,
+                           parameters={"agent": router_agent})
     
-    test_node = Node(node_name='test',
+    test_node = Node(node_name='testSum',
                      kind='STATE',
-                     command=print_val,
-                     parameters={'val':'hello'})
+                     command=get_test_sum)
     
     terminal_node = Node(node_name='test_terminal',
                          kind='TERMINAL')
     
 
-    edge1 = Edge(edge_name="edge1", function=None)
-    edge2 = Edge(edge_name="edge2", function=None)
+    edge1 = Edge(edge_name="edge1", condition=None)
+    edge2 = Edge(edge_name="edge2", condition=None)
+    #edge_c = Edge(edge_name="edge_w_condition", condition=test_condition, parameters={"state":MainState})
 
-    graph = Graph()
+    graph = Graph(state=MainState)
 
     supervisor_node.connect(to_node=test_node, edge=edge1, graph=graph)
     test_node.connect(to_node=terminal_node, edge=edge2, graph=graph)
-    breakpoint()
 
-    graph.run(start_node=test_node)
+    graph.run(start_node=supervisor_node, streaming=True)
 
