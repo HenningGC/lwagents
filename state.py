@@ -24,7 +24,7 @@ class State(ABC):
 class MainState(State):
     def __init__(self, messages: Optional[List] = []):
         self._agent = None
-        self.history = messages
+        self.history = messages or []
 
     @property
     def current_agent(self) -> Optional["Agent"]:

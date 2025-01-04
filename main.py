@@ -28,12 +28,12 @@ def print_val(val):
 
 if __name__ == "__main__":
     # Create a factory instance
-    # load_dotenv()
+    load_dotenv()
     factory = LLMFactory()
     # Create a GPT model
     gpt_model = factory.create_model("gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
 
-    currentState = MainState()
+    currentState = MainState([])
     agent = LLMAgent(llm_model= gpt_model, tools = [get_result_sum])
 
 
@@ -52,14 +52,13 @@ if __name__ == "__main__":
                          kind='TERMINAL')
     
 
-    edge1 = Edge(edge_name="edge1", function=None)
-    edge2 = Edge(edge_name="edge2", function=None)
+    edge1 = Edge(edge_name="edge1", condition=None)
+    edge2 = Edge(edge_name="edge2", condition=None)
 
     graph = Graph()
 
     supervisor_node.connect(to_node=test_node, edge=edge1, graph=graph)
     test_node.connect(to_node=terminal_node, edge=edge2, graph=graph)
-    breakpoint()
 
-    graph.run(start_node=test_node)
+    graph.run(start_node=supervisor_node)
 

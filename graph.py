@@ -50,9 +50,6 @@ class GraphException(Exception):
 @dataclass
 class Graph:
 
-    nodes_number: int
-    edges_number: int
-
     def __init__(self):
         self._graphDict = {}
         self._MainState = MainState(None)
@@ -135,8 +132,8 @@ class Graph:
         
         current_node = start_node
 
-        while current_node.kind != "TERMINAL" or current_node != None:
-            
+        while current_node.kind != "TERMINAL" and current_node != None:
+            print("Current_Node:", current_node, "Kind:",current_node.kind)
             result = None
             if current_node.command:
                 result = current_node.command(**current_node.parameters)
@@ -145,7 +142,16 @@ class Graph:
 
             next_node = None
             for connected_node, edge in self._graphDict.get(current_node, []):
-                if edge.run():  # Execute the edge's function
+                if edge.condition:
+                    if edge.parameters:  # Execute the edge's function
+                        if edge.conditions(**edge.parameters):
+                            next_node = connected_node
+                            break
+                    else:
+                        if edge.conditions(**edge.parameters):
+                            next_node = connected_node
+                            break
+                else:
                     next_node = connected_node
                     break
 
@@ -154,6 +160,8 @@ class Graph:
 
             # Transition to the next node
             current_node = next_node
+        print("Finished Graph Run")
+        print(self._MainState.history)
 
 
 
