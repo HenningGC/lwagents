@@ -153,5 +153,4 @@ Submit a pull request.
 This project is licensed under the MIT License.
 
 Author
-Henning
-[Your GitHub Profile](https://github.com/HenningGC)
+[HenningGC(https://github.com/HenningGC)
