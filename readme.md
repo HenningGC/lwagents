@@ -1,2 +1,1 @@
-## Stripe Agents
-https://docs.stripe.com/agents?framework=langchain
+## lwAgents / LightWeight Agents Library
