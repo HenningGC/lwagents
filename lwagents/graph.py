@@ -32,7 +32,6 @@ class Node(BaseModel):
         arbitrary_types_allowed = True
 
     def __hash__(self):
-        # Use a tuple of the field values to generate a hash
         return hash((self.node_name, self.kind))
 
 
