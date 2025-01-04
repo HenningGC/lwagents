@@ -44,6 +44,32 @@ class Edge(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+class DirectTraversal:
+    """
+    Wrapper class for direct traversal instructions.
+    Holds the name of the target node for traversal.
+    """
+    def __init__(self, target_node_name: str):
+        self.target_node_name = target_node_name
+
+def node_router(func):
+    """
+    Decorator to wrap the result of a function with DirectTraversal.
+
+    Args:
+        func (callable): The function to decorate.
+
+    Returns:
+        callable: The wrapped function.
+    """
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        if isinstance(result, str):
+            return DirectTraversal(target_node_name=result)
+        return result
+    return wrapper
+
+
 class GraphException(Exception):
     pass
 
@@ -95,33 +121,27 @@ class Graph:
             TypeError: If any key in the graph_dict is not a Node or if any value is not a list of dictionaries.
         """
         for node, edges in graph_dict.items():
-            # Check that the key is a Node
             if not isinstance(node, Node):
                 raise TypeError(f"Graph key {node} must be of type Node. Got {type(node)} instead.")
 
-            # Check that the value is a list
             if not isinstance(edges, list):
                 raise TypeError(f"Graph value for {node} must be of type List. Got {type(edges)} instead.")
 
             for edge in edges:
-                # Check that each element in the list is a dictionary with one key-value pair
                 if not (isinstance(edge, dict) and len(edge) == 1):
                     raise TypeError(f"Each edge in the list for node {node} must be a dictionary with one (Node, Edge) pair. Got {edge} instead.")
 
-                # Extract the Node and Edge from the dictionary
                 connected_node, edge_obj = next(iter(edge.items()))
 
-                # Validate that the connected_node is a Node and edge_obj is an Edge
                 if not isinstance(connected_node, Node):
                     raise TypeError(f"Key in edge dictionary must be of type Node. Got {type(connected_node)} instead.")
                 if not isinstance(edge_obj, Edge):
                     raise TypeError(f"Value in edge dictionary must be of type Edge. Got {type(edge_obj)} instead.")
 
-            # Check if the node is the start node and set its kind
+            
             if node.node_name == start_name:
                 node.kind = "START"
 
-            # Store the processed edges in the graph's internal dictionary
             self._graphDict[node] = [(connected_node, edge_obj) for edge in edges for connected_node, edge_obj in edge.items()]
         
 
@@ -171,26 +191,40 @@ class Graph:
                 print("State Global History", self._MainState.history)
 
             next_node = None
-            for connected_node, edge in self._graphDict.get(current_node, []):
-                if edge.condition:
-                    if streaming:
-                        print(f"Executing edge condition on {edge.edge_name}")
-                    edge_result = edge.condition(**edge.parameters) if edge.parameters else edge.condition()
-
-                    if streaming:
-                        print(f"Edge {edge.edge_name} condition returned {edge_result}")
-
-                    if not isinstance(edge_result, bool):
-                        raise GraphException("Edge condition must return a Bool")
-
-                    if edge_result:
+            breakpoint()
+            if isinstance(result, DirectTraversal):
+                target_node_name = result.target_node_name
+                if streaming:
+                    print(f"Direct traversal to node: {target_node_name}")
+                next_node = None
+                for connected_node, edge in self._graphDict.get(current_node, []):
+                    if connected_node.node_name == target_node_name:
                         next_node = connected_node
                         log_entry["transition"] = (edge.edge_name, connected_node.node_name)
                         break
-                else:
-                    next_node = connected_node
-                    log_entry["transition"] = (edge.edge_name, connected_node.node_name)
-                    break
+                if not next_node:
+                    raise GraphException(f"Direct traversal failed: Node {target_node_name} not found")
+            else:
+                for connected_node, edge in self._graphDict.get(current_node, []):
+                    if edge.condition:
+                        if streaming:
+                            print(f"Executing edge condition on {edge.edge_name}")
+                        edge_result = edge.condition(**edge.parameters) if edge.parameters else edge.condition()
+
+                        if streaming:
+                            print(f"Edge {edge.edge_name} condition returned {edge_result}")
+
+                        if not isinstance(edge_result, bool):
+                            raise GraphException("Edge condition must return a Bool")
+
+                        if edge_result:
+                            next_node = connected_node
+                            log_entry["transition"] = (edge.edge_name, connected_node.node_name)
+                            break
+                    else:
+                        next_node = connected_node
+                        log_entry["transition"] = (edge.edge_name, connected_node.node_name)
+                        break
 
             if streaming:
                 if next_node:
@@ -203,8 +237,8 @@ class Graph:
             step_number += 1
 
         if streaming:
-            print("Finished Graph Run")
             print(self._MainState.history)
+            print("Finished Graph Run")
 
 
 
