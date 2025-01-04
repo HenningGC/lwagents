@@ -1,0 +1,19 @@
+Metadata-Version: 2.1
+Name: lwagents
+Version: 0.1.0
+Summary: A lightweight library for building graph-driven AI agents with tool integration.
+Home-page: https://github.com/HenningGC/lwagents
+Author: Henning Gruhl
+Author-email: henning@gruhl.me
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pydantic>=1.10.0
+Requires-Dist: python-dotenv
+Requires-Dist: openai
+
+## Stripe Agents
+https://docs.stripe.com/agents?framework=langchain

@@ -12,7 +12,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "pydantic>=1.10.0",
-        "dotenv",
+        "python-dotenv",
         "openai",
         # Add other dependencies here
     ],
