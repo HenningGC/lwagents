@@ -191,7 +191,6 @@ class Graph:
                 print("State Global History", self._MainState.history)
 
             next_node = None
-            breakpoint()
             if isinstance(result, DirectTraversal):
                 target_node_name = result.target_node_name
                 if streaming:
