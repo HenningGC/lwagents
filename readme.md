@@ -124,6 +124,19 @@ def calculate_sum(a, b):
 agent = LLMAgent(llm_model=llm_model, tools=[calculate_sum])
 
 ```
+
+Node Routing
+Explicitly define router nodes.
+
+```
+@node_router
+def test_router(agent, state):
+    prompt =[{"role": "system", "content": "You are an agent router and your task is to decide which node to travel to next based on the task and results thus far. Your next answer must only return the node name."},
+     {"role": "user", "content": f"You have the following nodes at your disposal: get_division, search_internet, get_sum, end. You have to decide in which order you will visit each node based on this objective: get sum, then divide and search on the internet. These are the results thus far: {state.history}"}]
+    result = agent.action(prompt = prompt)
+
+    return result
+```
 ## Project Structure
 
 ```
