@@ -43,8 +43,8 @@ To install the library, run:
 
 ```
 pip install lwagents
-From Source
 ```
+From Source
 To install the library from source:
 
 Clone the repository:
@@ -111,7 +111,7 @@ decision_node = Node(
 )
 ```
 Tools for Task Execution
-Define custom tools and integrate them into the graph:
+Define custom tools for your agents to use:
 
 ```
 from lwagents import Tool
@@ -121,7 +121,7 @@ def calculate_sum(a, b):
     return a + b
 
 # Use the tool in a node
-tool_node = Node(node_name="calculate", kind="STATE", command=calculate_sum, parameters={"a": 5, "b": 3})
+agent = LLMAgent(llm_model=llm_model, tools=[calculate_sum])
 
 ```
 ## Project Structure
