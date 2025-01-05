@@ -215,7 +215,7 @@ class Graph(BaseGraph):
                 "transition": None
             }
 
-            self._MainState.update_state(log_entry)
+            self._MainState.update_state(**log_entry)
 
             if streaming:
                 print("State Global History", self._MainState.history)
