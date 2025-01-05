@@ -212,7 +212,7 @@ class Graph(BaseGraph):
                 "node_name": current_node.node_name,
                 "node_kind": current_node.kind,
                 "command_result": result,
-                "transition": None 
+                "transition": None
             }
 
             self._MainState.update_state(log_entry)

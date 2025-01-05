@@ -71,7 +71,7 @@ class LLamaModelLoader:
 
 class GPTModel(BaseLLMModel):
     @override
-    def generate(self, model_name: str = "gpt-4o-mini", messages: List[Dict[str, str]] | None = None, structure: BaseModel | None = None, tools: Dict[str,callable] | None = None) -> str:
+    def generate(self, model_name: str = "gpt-4o-mini", messages: List[Dict[str, str]] | None = None, structure: BaseModel | None = None, tools: Dict[str,callable] | None = None):
         """
         Generates a response using the LLM, dynamically integrating tools.
         

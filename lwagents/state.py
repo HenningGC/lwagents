@@ -46,8 +46,8 @@ class State(ABC):
 
 # Concrete Implementation
 class MainState(State):
-    def __init__(self, messages: Optional[List] = []):
-        self._agent = None
+    def __init__(self, agent: Agent = None, messages: Optional[List] = []):
+        self._agent = agent
         self.history = messages or []
         self.last_update = None
 
