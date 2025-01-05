@@ -17,7 +17,7 @@ class Node(BaseModel):
     command: Optional[callable] = None
     parameters: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Parameters for the command")
 
-    def connect(self, to_node: Self, edge: 'Edge', graph: 'Graph'):
+    def connect(self, to_node: Self, edge: 'Edge'):
         """
         Connects this node to another node using the given edge.
 
@@ -26,7 +26,8 @@ class Node(BaseModel):
             edge (Edge): The edge connecting the nodes.
             graph (Graph): The graph to which the connection belongs.
         """
-        graph.connect_edge(FROM=self, TO=to_node, WITH=edge)
+        current_graph = BaseGraph.get_current_graph()
+        current_graph.connect_edge(FROM=self, TO=to_node, WITH=edge)
 
     class Config:
         arbitrary_types_allowed = True
@@ -72,11 +73,41 @@ def node_router(func):
 class GraphException(Exception):
     pass
 
-@dataclass
-class Graph:
+class BaseGraph:
+    _current_graph = None  # Tracks the active graph context
 
-    def __init__(self, state):
+    def __init__(self):
         self._graphDict = {}
+
+    def __enter__(self):
+        """
+        Enter the context: set the current graph context.
+        """
+        BaseGraph._current_graph = self
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Exit the context: clear the current graph context.
+        """
+        BaseGraph._current_graph = None
+
+    @classmethod
+    def get_current_graph(cls):
+        """
+        Retrieve the current graph in context.
+        """
+        if cls._current_graph is None:
+            raise ValueError("No active graph context. Use 'with Graph() as graph:'")
+        return cls._current_graph
+
+
+
+@dataclass
+class Graph(BaseGraph):
+
+    def __init__(self, state=None):
+        super().__init__()
         self._MainState = state or MainState(None)
 
     def connect_edge(self, FROM: Node, TO: Node, WITH: Edge):
@@ -237,12 +268,3 @@ class Graph:
         if streaming:
             print(self._MainState.history)
             print("Finished Graph Run")
-
-
-
-
-
-        
-                
-            
-                

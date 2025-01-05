@@ -1,8 +1,8 @@
-from state import MainState
-from agent import LLMAgent
-from tools import Tool
-from graph import *
-from models import LLMFactory
+from ..lwagents.state import MainState
+from ..lwagents.agent import LLMAgent
+from ..lwagents.tools import Tool
+from ..lwagents.graph import *
+from ..lwagents.models import LLMFactory
 from dotenv import load_dotenv
 import os
 
@@ -32,10 +32,9 @@ def test_router(agent, state):
     return result
 
 if __name__ == "__main__":
-    # Create a factory instance
     load_dotenv()
     factory = LLMFactory()
-    # Create a GPT model
+
     gpt_model = factory.create_model("gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
 
     MainState = MainState([])
@@ -68,18 +67,15 @@ if __name__ == "__main__":
 
     edge = Edge(edge_name="edge1", condition=None)
 
-    graph = Graph(state=MainState)
+    with Graph(state=MainState) as graph:
+        supervisor_node.connect(to_node=get_sum_node, edge=edge)
+        supervisor_node.connect(to_node=get_division_node, edge=edge)
+        supervisor_node.connect(to_node=search_internet_node, edge=edge)
+        supervisor_node.connect(to_node=end_node, edge=edge)
+        get_sum_node.connect(to_node=supervisor_node, edge=edge)
+        get_division_node.connect(to_node=supervisor_node, edge=edge)
+        search_internet_node.connect(to_node=supervisor_node, edge=edge)
 
-    supervisor_node.connect(to_node=get_sum_node, edge=edge, graph=graph)
-    supervisor_node.connect(to_node=get_division_node, edge=edge, graph=graph)
-    supervisor_node.connect(to_node=search_internet_node, edge=edge, graph=graph)
-    supervisor_node.connect(to_node=end_node, edge=edge, graph=graph)
-    get_sum_node.connect(to_node=supervisor_node, edge=edge, graph=graph)
-    get_division_node.connect(to_node=supervisor_node, edge=edge, graph=graph)
-    search_internet_node.connect(to_node=supervisor_node, edge=edge, graph=graph)
-
-
-    graph.run(start_node=supervisor_node, streaming=True)
+        graph.run(start_node=supervisor_node, streaming=True)
 
     MainState.print_history()
-
