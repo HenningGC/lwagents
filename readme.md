@@ -79,10 +79,10 @@ edge2 = Edge(edge_name="to_end")
 ```
 Create a Graph: Connect nodes with edges to define transitions.
 ```
-graph = Graph()
+with Graph(state=YourGlobalState) as graph:
+    start_node.connect(to_node=task_node, edge=edge1)
+    task_node.connect(to_node=end_node, edge=edge1)
 
-start_node.connect(to_node=task_node, edge=edge1, graph=graph)
-task_node.connect(to_node=end_node, edge=edge2, graph=graph)
 
 ```
 Run the Workflow: Execute the graph starting from the START node.
