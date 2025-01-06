@@ -1,4 +1,4 @@
-from .state import MainState
+from .state import AgentState
 from .agent import LLMAgent
 from dataclasses import dataclass
 from pydantic import BaseModel, Field, SkipValidation
@@ -108,7 +108,7 @@ class Graph(BaseGraph):
 
     def __init__(self, state=None):
         super().__init__()
-        self._MainState = state or MainState(None)
+        self._AgentState = state or AgentState(None)
 
     def connect_edge(self, FROM: Node, TO: Node, WITH: Edge):
         """
@@ -173,11 +173,8 @@ class Graph(BaseGraph):
                 node.kind = "START"
 
             self._graphDict[node] = [(connected_node, edge_obj) for edge in edges for connected_node, edge_obj in edge.items()]
-        
-
-
-    @override
-    def run(self, start_node, streaming=False, *args, **kwargs):
+    
+    def run(self, start_node:Node, streaming=False, additional_log_entries: Dict=None, *args, **kwargs):
         """
         Executes the graph starting from the given start_node, with structured logging for each step.
 
@@ -212,13 +209,14 @@ class Graph(BaseGraph):
                 "node_name": current_node.node_name,
                 "node_kind": current_node.kind,
                 "command_result": result,
-                "transition": None
+                "transition": None,
+                **additional_log_entries
             }
 
-            self._MainState.update_state(**log_entry)
+            self._AgentState.update_state(**log_entry)
 
             if streaming:
-                print("State Global History", self._MainState.history)
+                print("State Global History", self._AgentState.history)
 
             next_node = None
             if isinstance(result, DirectTraversal):
@@ -266,5 +264,5 @@ class Graph(BaseGraph):
             step_number += 1
 
         if streaming:
-            print(self._MainState.history)
+            print(self._AgentState.history)
             print("Finished Graph Run")
