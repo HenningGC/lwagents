@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import inspect
 from pydantic import BaseModel, Field
-from typing import Any
+from typing import Any, get_type_hints, List
 
 
 class BaseTool(ABC):
@@ -56,21 +56,3 @@ def Tool(func):
     FunctionTool.__name__ = func.__name__  # Name the class after the function for clarity
 
     return FunctionTool()
-
-def create_tool_class(tool_name: str, params: dict):
-    """
-    Dynamically create a Pydantic model for a tool.
-    
-    Args:
-        tool_name (str): The name of the tool.
-        params (dict): The parameters the tool expects, with names as keys and types as values.
-    
-    Returns:
-        BaseModel: A dynamically created Pydantic model class.
-    """
-    return type(
-        tool_name,
-        (BaseModel,),
-        params
-    )
-
