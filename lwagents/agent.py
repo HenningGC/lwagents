@@ -46,7 +46,7 @@ class LLMAgent(Agent):
                 function_to_call = self.tools[function_name]
                 function_args = json.loads(tool_call.function.arguments)
                 if function_args:
-                    function_response = function_to_call.execute(function_args)
+                    function_response = function_to_call.execute(**function_args)
                 else:
                     function_response = function_to_call.execute()
                 tool_response_content = {
