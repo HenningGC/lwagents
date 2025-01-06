@@ -64,9 +64,15 @@ class MainState(State):
                 f"Agent {agent} must be of type Agent, got {type(agent)} instead."
             )
 
-    def update_state(self, log: str) -> None:
-        self.history.append(log)
-        self.last_update = log
+    def update_state(self, step_number, node_name, node_kind, command_result, transition, **kwargs) -> None:
+        log_entry = log_entry = {
+            "step_number": step_number,
+            "node_name": node_name,
+            "node_kind": node_kind,
+            "command_result": command_result,
+            "transition": transition,}
+        self.history.append(log_entry)
+        self.last_update = log_entry
 
 
         
