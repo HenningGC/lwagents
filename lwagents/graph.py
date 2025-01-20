@@ -174,7 +174,7 @@ class Graph(BaseGraph):
 
             self._graphDict[node] = [(connected_node, edge_obj) for edge in edges for connected_node, edge_obj in edge.items()]
     
-    def run(self, start_node:Node, streaming=False, additional_log_entries: Dict=None, *args, **kwargs):
+    def run(self, start_node:Node, streaming=False, additional_log_entries: Dict={}, *args, **kwargs):
         """
         Executes the graph starting from the given start_node, with structured logging for each step.
 
@@ -208,7 +208,7 @@ class Graph(BaseGraph):
                 "step_number": step_number,
                 "node_name": current_node.node_name,
                 "node_kind": current_node.kind,
-                "command_result": result,
+                "command_result": result or "No Result",
                 "transition": None,
                 **additional_log_entries
             }
