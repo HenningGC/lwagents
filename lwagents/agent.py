@@ -3,7 +3,7 @@ from .memory import Memory
 from abc import ABC, abstractmethod
 from typing_extensions import Self, override
 from pydantic import BaseModel
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 import json
 
 
@@ -29,7 +29,7 @@ class Agent(ABC):
 
 class LLMAgentResponse(BaseModel):
     role: str  # e.g., "assistant" or "user"
-    content: str  # The actual message content
+    content: Any  # The actual message content
     tool_used: Optional[str] = None  # Optional: Tool used during execution
 
 class LLMAgent(Agent):
@@ -60,7 +60,7 @@ class LLMAgent(Agent):
                 
                 result = LLMAgentResponse(
                     role="tool",
-                    content=str(tool_response_content.get("content","")),
+                    content=tool_response_content.get("content",""),
                     tool_used=str(tool_response_content.get("function_name",None))
                 )
                 return result
