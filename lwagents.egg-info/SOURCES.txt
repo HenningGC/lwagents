@@ -5,6 +5,7 @@ setup.py
 lwagents/__init__.py
 lwagents/agent.py
 lwagents/graph.py
+lwagents/memory.py
 lwagents/models.py
 lwagents/state.py
 lwagents/tools.py

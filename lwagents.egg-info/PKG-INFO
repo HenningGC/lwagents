@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.2
 Name: lwagents
 Version: 0.1.0
 Summary: A lightweight library for building graph-driven AI agents with tool integration.
@@ -14,6 +14,15 @@ License-File: LICENSE
 Requires-Dist: pydantic>=1.10.0
 Requires-Dist: python-dotenv
 Requires-Dist: openai
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
 
 ![image](https://github.com/user-attachments/assets/939a7ad6-f572-4abf-a3db-12030d670ef0)
 
@@ -96,10 +105,10 @@ edge2 = Edge(edge_name="to_end")
 ```
 Create a Graph: Connect nodes with edges to define transitions.
 ```
-graph = Graph()
+with Graph(state=YourGlobalState) as graph:
+    start_node.connect(to_node=task_node, edge=edge1)
+    task_node.connect(to_node=end_node, edge=edge1)
 
-start_node.connect(to_node=task_node, edge=edge1, graph=graph)
-task_node.connect(to_node=end_node, edge=edge2, graph=graph)
 
 ```
 Run the Workflow: Execute the graph starting from the START node.
