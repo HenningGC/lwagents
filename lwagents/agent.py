@@ -1,9 +1,11 @@
 from .tools import Tool
+from .memory import Memory
 from abc import ABC, abstractmethod
 from typing_extensions import Self, override
 from pydantic import BaseModel
 from typing import Optional, Dict
 import json
+
 
 class InvalidAgent(Exception):
     pass
@@ -31,10 +33,10 @@ class LLMAgentResponse(BaseModel):
     tool_used: Optional[str] = None  # Optional: Tool used during execution
 
 class LLMAgent(Agent):
-    def __init__(self, llm_model, tools=None):
+    def __init__(self, llm_model, tools=None, memory: Optional[Memory] = None):
         super().__init__(tools)
         self.llm_model = llm_model
-        self.assistant_responses = []
+        self.memory = memory or Memory()
 
     @override
     def action(self, prompt: str, *args, **kwargs):
@@ -68,7 +70,8 @@ class LLMAgent(Agent):
                     content=response.content,
                     tool_used=None
                 )
-        self.assistant_responses.append(result)
+        if self.memory:
+            self.memory.add_entry(result)
 
                 
         return result
