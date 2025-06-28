@@ -1,0 +1,22 @@
+# Use Python 3.11 slim image
+FROM python:3.11-slim
+
+WORKDIR /workspace
+
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install uv
+
+COPY pyproject.toml .
+COPY README.md readme.md ./
+
+COPY lwagents/ lwagents/
+COPY examples/ examples/
+COPY tests/ tests/
+
+RUN uv sync
+
+CMD ["/bin/bash"] 
