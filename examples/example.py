@@ -1,19 +1,14 @@
-from ..lwagents.state import AgentState
-from ..lwagents.agent import LLMAgent
-from ..lwagents.tools import Tool
-from ..lwagents.graph import *
-from ..lwagents.models import LLMFactory
+from lwagents import *
 from dotenv import load_dotenv
 import os
 
-
 @Tool
-def get_result_sum():
-    return 5/342
+def get_result_sum(val1: int,val2: int):
+    return val1+val2
 
 def get_sum(agent):
     result = agent.action([{"role": "system", "content":"You are an helpful assistant that uses his tools at their disposal"},
-                  {"role": "user", "content":"Use the get_result_sum tool"}])
+                  {"role": "user", "content":"Use the get_result_sum tool to sum 300+140"}])
     
     return result
 
@@ -28,8 +23,7 @@ def test_router(agent, state):
     prompt =[{"role": "system", "content": "You are an agent router and you decide which node to travel to next based on the task and results thus far. Your next answer must only return the node name."},
      {"role": "user", "content": f"You have the following nodes at your disposal: get_division, search_internet, get_sum, end. You have to decide the sequence of nodes to travel to based on based on this objective: get sum, then divide and search on the internet. These are the results thus far: {state.history}"}]
     result = agent.action(prompt = prompt)
-
-    return result
+    return result.content
 
 if __name__ == "__main__":
     load_dotenv()
@@ -37,7 +31,7 @@ if __name__ == "__main__":
 
     gpt_model = factory.create_model("gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
 
-    AgentState = AgentState([])
+    MainState = AgentState([])
     tool_agent = LLMAgent(llm_model= gpt_model, tools = [get_result_sum])
     router_agent = LLMAgent(llm_model= gpt_model)
 
@@ -46,7 +40,7 @@ if __name__ == "__main__":
                            kind='START',
                            command=test_router,
                            parameters={"agent": router_agent,
-                                       "state":AgentState})
+                                       "state":MainState})
     
     get_sum_node = Node(node_name='get_sum',
                      kind='STATE',
@@ -67,7 +61,7 @@ if __name__ == "__main__":
 
     edge = Edge(edge_name="edge1", condition=None)
 
-    with Graph(state=AgentState) as graph:
+    with Graph(state=MainState) as graph:
         supervisor_node.connect(to_node=get_sum_node, edge=edge)
         supervisor_node.connect(to_node=get_division_node, edge=edge)
         supervisor_node.connect(to_node=search_internet_node, edge=edge)
@@ -76,6 +70,6 @@ if __name__ == "__main__":
         get_division_node.connect(to_node=supervisor_node, edge=edge)
         search_internet_node.connect(to_node=supervisor_node, edge=edge)
 
-        graph.run(start_node=supervisor_node, streaming=True)
+        graph.run(start_node=supervisor_node, streaming=True, additional_log_entries={"test":"test"})
 
-    AgentState.print_history()
+    MainState.print_history()
