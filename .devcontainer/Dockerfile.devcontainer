@@ -11,12 +11,11 @@ RUN apt-get update && apt-get install -y \
 RUN pip install uv
 
 COPY pyproject.toml .
-COPY README.md readme.md ./
+COPY readme.md ./
 
 COPY lwagents/ lwagents/
 COPY examples/ examples/
 COPY tests/ tests/
 
 RUN uv sync
-
-CMD ["/bin/bash"] 
+RUN echo export "PYTHONPATH=\"\${PYTHONPATH}:/workspaces/rg-realai-lib\"" | tee -a ~/.bashrc
