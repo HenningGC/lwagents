@@ -8,9 +8,5 @@
 		"ms-python.flake8",
 		"ms-toolsai.jupyter"
 	],
-	"remoteUser": "root",
-	"workspaceFolder": "/workspace",
-	"mounts": [
-		"source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
-	]
+	"remoteUser": "root"
 } 

@@ -18,5 +18,4 @@ COPY examples/ examples/
 COPY tests/ tests/
 
 RUN uv sync
-
-CMD ["/bin/bash"] 
+RUN echo export "PYTHONPATH=\"\${PYTHONPATH}:/workspaces/rg-realai-lib\"" | tee -a ~/.bashrc
