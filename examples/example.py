@@ -31,6 +31,7 @@ if __name__ == "__main__":
 
     gpt_model = factory.create_model("gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
 
+    GraphState = GraphState()
     MainState = AgentState([])
     tool_agent = LLMAgent(llm_model= gpt_model, tools = [get_result_sum])
     router_agent = LLMAgent(llm_model= gpt_model)
@@ -61,7 +62,7 @@ if __name__ == "__main__":
 
     edge = Edge(edge_name="edge1", condition=None)
 
-    with Graph(state=MainState) as graph:
+    with Graph(state=GraphState) as graph:
         supervisor_node.connect(to_node=get_sum_node, edge=edge)
         supervisor_node.connect(to_node=get_division_node, edge=edge)
         supervisor_node.connect(to_node=search_internet_node, edge=edge)

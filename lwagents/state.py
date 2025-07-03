@@ -43,16 +43,8 @@ class State(ABC):
                     print(f"    {key}: {value}")
             print("-" * 50)
 
-    def update_state(self, step_number, node_name, node_kind, command_result, transition, **kwargs) -> None:
-        log_entry = {
-            "step_number": step_number,
-            "node_name": node_name,
-            "node_kind": node_kind,
-            "command_result": command_result,
-            "transition": transition,
-            **kwargs}
-        self.history.append(log_entry)
-        self.last_update = log_entry
+    def update_state(self) -> None:
+        pass
 
 # Concrete Implementation
 class AgentState(State):
@@ -81,12 +73,32 @@ class AgentState(State):
             )
 
     @override
+    def update_state(self, **kwargs) -> None:
+        """
+        Updates the agent state with a new log entry.
+        """
+        state_entry = {
+            **kwargs
+        }
+
+
+class GraphState(State):
+
+    def __init__(self, initial_history: Optional[List] = []):
+        super().__init__(initial_history=initial_history)
+
+    @override
     def update_state(self, step_number, node_name, node_kind, command_result, transition, **kwargs) -> None:
         """
         Updates the agent state with a new log entry.
         """
-        super().update_state(step_number, node_name, node_kind, command_result, transition, **kwargs)
-
-
-        
+        log_entry = {
+            "step_number": step_number,
+            "node_name": node_name,
+            "node_kind": node_kind,
+            "command_result": command_result,
+            "transition": transition,
+            **kwargs}
+        self.history.append(log_entry)
+        self.last_update = log_entry
 
