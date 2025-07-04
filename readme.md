@@ -27,7 +27,8 @@ Whether you're designing task-oriented AI systems, probabilistic workflows, or i
   - Direct traversal capabilities allow agents or nodes to dynamically decide the next step.
 
 - **State Management**:
-  - Built-in support for maintaining and updating global state during execution.
+  - Built-in support for maintaining and updating both local graph state and global agent state during execution.
+  - Global agent state allows tracking all agent actions across the entire workflow.
   - Record detailed histories of execution for debugging and analysis.
 
 - **Extensibility**:
@@ -100,7 +101,7 @@ from lwagents import LLMAgent, LLMFactory
 # Initialize an LLM model
 factory = LLMFactory()
 llm_model = factory.create_model("gpt", openai_api_key="your_openai_api_key")
-agent = LLMAgent(llm_model=llm_model)
+agent = LLMAgent(name="my_agent", llm_model=llm_model)
 
 # Use the agent in a node
 decision_node = Node(
@@ -110,6 +111,24 @@ decision_node = Node(
     parameters={"prompt": [{"role": "user", "content": "Which task should I perform next?"}]}
 )
 ```
+
+Global Agent State Management
+Access and manage global agent state across your workflow:
+
+```
+from lwagents.state import get_global_agent_state, reset_global_agent_state
+
+# Reset global state at the beginning (optional, good for testing)
+reset_global_agent_state()
+
+# Access global state to see all agent activities
+global_state = get_global_agent_state()
+print(f"Total agent actions performed: {len(global_state.history)}")
+
+# Print the global agent state history
+global_state.print_history()
+```
+
 Tools for Task Execution
 Define custom tools for your agents to use:
 
@@ -121,21 +140,22 @@ def calculate_sum(a, b):
     return a + b
 
 # Use the tool in a node
-agent = LLMAgent(llm_model=llm_model, tools=[calculate_sum])
+agent = LLMAgent(name="tool_agent", llm_model=llm_model, tools=[calculate_sum])
 
 ```
 
 Node Routing
-Explicitly define router nodes.
+Explicitly define router nodes that use global agent state.
 
 ```
 @node_router
-def test_router(agent, state):
+def test_router(agent):
+    global_state = get_global_agent_state()
     prompt =[{"role": "system", "content": "You are an agent router and your task is to decide which node to travel to next based on the task and results thus far. Your next answer must only return the node name."},
-     {"role": "user", "content": f"You have the following nodes at your disposal: get_division, search_internet, get_sum, end. You have to decide in which order you will visit each node based on this objective: get sum, then divide and search on the internet. These are the results thus far: {state.history}"}]
+     {"role": "user", "content": f"You have the following nodes at your disposal: get_division, search_internet, get_sum, end. You have to decide in which order you will visit each node based on this objective: get sum, then divide and search on the internet. These are the results thus far: {global_state.history}"}]
     result = agent.action(prompt = prompt)
 
-    return result
+    return result.content
 ```
 ## Project Structure
 
@@ -148,11 +168,11 @@ lwagents/
 │   ├── agent.py            # Agent implementation
 │   ├── tools.py            # Tooling and decorators
 │   ├── models.py           # Model-related code
-│   ├── utils.py            # Utility functions (if any)
+│   ├── messages.py         # Message classes for agent communication
+│   ├── logs.py             # Logging utilities
 ├── tests/                  # Test cases
 ├── examples/               # Example scripts
 ├── README.md               # Project documentation
-├── setup.py                # Setup script for packaging
 ├── pyproject.toml          # Build system requirements
 ├── requirements.txt        # Dependencies for the library
 └── LICENSE                 # License for the library
