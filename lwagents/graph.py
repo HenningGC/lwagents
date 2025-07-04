@@ -108,7 +108,7 @@ class Graph(BaseGraph):
 
     def __init__(self, state=None):
         super().__init__()
-        self._GraphState = state or GraphState(None)
+        self._GraphState = state or GraphState([])
 
     def connect_edge(self, FROM: Node, TO: Node, WITH: Edge):
         """
