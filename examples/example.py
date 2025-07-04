@@ -23,6 +23,7 @@ def get_division():
 def search_internet():
     return "RESULTS HAVE BEEN VERIFIED"
 
+
 def test_router(agent):
     global_state = get_global_agent_state()
     prompt =[{"role": "system", "content": "You are an agent router and you decide which node to travel to next based on the task and results thus far. Your next answer must only return the node name."},
@@ -39,7 +40,6 @@ if __name__ == "__main__":
     
     # Reset global state at the beginning (optional, good for testing)
     reset_global_agent_state()
-
 
     gpt_model = create_model(model_type="gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
 
