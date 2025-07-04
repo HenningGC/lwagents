@@ -1,18 +1,20 @@
 from .tools import Tool
-from .memory import Memory
+from .state import AgentState, get_global_agent_state, State
 from abc import ABC, abstractmethod
 from typing_extensions import Self, override
 from pydantic import BaseModel
 from typing import Optional, Dict
 import json
-
+from .messages import LLMAgentResponse, LLMAgentRequest, LLMEntry
 
 class InvalidAgent(Exception):
     pass
 
 class Agent(ABC):
-    def __init__(self, tools: list[Tool]):
+    def __init__(self, name: str, tools: list[Tool], state: AgentState):
         self.tools = None
+        self.state = state
+        self.name = name
         if tools:
             self.tools = {type(tool).__name__: tool for tool in tools}
 
@@ -26,20 +28,24 @@ class Agent(ABC):
             return self.tools[tool_name].execute(*args, **kwargs)
         raise ValueError(f"Tool {tool_name} not found!")
     
-
-class LLMAgentResponse(BaseModel):
-    role: str  # e.g., "assistant" or "user"
-    content: str  # The actual message content
-    tool_used: Optional[str] = None  # Optional: Tool used during execution
+    def update_global_state(self, name, entry, **kwargs):
+        """Update the global agent state with information about this agent's action."""
+        global_state = get_global_agent_state()
+        global_state.update_state(
+            agent_name=name,
+            agent_kind=type(self).__name__,
+            entry=entry,
+            **kwargs
+        )
 
 class LLMAgent(Agent):
-    def __init__(self, llm_model, tools=None, memory: Optional[Memory] = None):
-        super().__init__(tools)
+    def __init__(self, name: str, llm_model, tools=None, state: Optional[AgentState] = AgentState()):
+        super().__init__(name=name, tools=tools, state=state)
         self.llm_model = llm_model
-        self.memory = memory or Memory()
 
     @override
-    def action(self, prompt: str, *args, **kwargs):
+    def action(self, prompt: str, state_entry: Optional[dict] = {}, *args, **kwargs):
+        request = LLMAgentRequest(content=prompt)
         response = self.llm_model.generate(messages=prompt, tools = self.tools, *args, **kwargs)
         tool_calls = response.tool_calls
         if tool_calls:
@@ -63,15 +69,23 @@ class LLMAgent(Agent):
                     content=str(tool_response_content.get("content","")),
                     tool_used=str(tool_response_content.get("function_name",None))
                 )
-                return result
-        
-        result = LLMAgentResponse(
-                    role="assistant",
-                    content=response.content,
-                    tool_used=None
-                )
-        if self.memory:
-            self.memory.add_entry(result)
+        else:
+            result = LLMAgentResponse(
+                        role="assistant",
+                        content=response.content,
+                        tool_used=None
+                    )
+            
+        entry = LLMEntry(
+            AgentRequest = request,
+            AgentResponse= result
+        )
 
-                
+        # Update both local and global state
+        self.update_state(request=request, response=result, **state_entry)
+        self.update_global_state(name=self.name, entry=entry)
+           
         return result
+    
+    def update_state(self, *args, **kwargs):
+        self.state.update_state(*args, **kwargs)

@@ -1,4 +1,4 @@
-from .state import AgentState
+from .state import GraphState
 from .agent import LLMAgent
 from dataclasses import dataclass
 from pydantic import BaseModel, Field, SkipValidation
@@ -108,7 +108,7 @@ class Graph(BaseGraph):
 
     def __init__(self, state=None):
         super().__init__()
-        self._AgentState = state or AgentState(None)
+        self._GraphState = state or GraphState([])
 
     def connect_edge(self, FROM: Node, TO: Node, WITH: Edge):
         """
@@ -213,10 +213,10 @@ class Graph(BaseGraph):
                 **additional_log_entries
             }
 
-            self._AgentState.update_state(**log_entry)
+            self._GraphState.update_state(**log_entry)
 
             if streaming:
-                print("State Global History", self._AgentState.history)
+                print("State Global History", self._GraphState.history)
 
             next_node = None
             if isinstance(result, DirectTraversal):
@@ -264,5 +264,5 @@ class Graph(BaseGraph):
             step_number += 1
 
         if streaming:
-            print(self._AgentState.history)
+            print(self._GraphState.history)
             print("Finished Graph Run")
