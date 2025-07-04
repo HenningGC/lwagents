@@ -10,7 +10,7 @@ from .graph import Graph, Node, Edge, GraphRequest
 from .state import AgentState, GraphState, get_global_agent_state, reset_global_agent_state
 from .agent import LLMAgent
 from .tools import Tool
-from .models import LLMFactory
+from .models import create_model
 
 __all__ = [
     # Modules (for advanced users who want lwagents.state.something)
@@ -18,7 +18,7 @@ __all__ = [
     "state", 
     "agent",
     "tools", 
-    "models",
+    "create_model",
     
     # Core classes (for basic usage)
     "Graph",
@@ -28,7 +28,7 @@ __all__ = [
     "GraphState",
     "LLMAgent", 
     "Tool",
-    "LLMFactory",
+    "models",
     
     # Functions and utilities
     "GraphRequest",

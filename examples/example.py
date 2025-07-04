@@ -39,10 +39,9 @@ if __name__ == "__main__":
     
     # Reset global state at the beginning (optional, good for testing)
     reset_global_agent_state()
-    
-    factory = LLMFactory()
 
-    gpt_model = factory.create_model("gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
+
+    gpt_model = create_model(model_type="gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
 
     tool_agent = LLMAgent(name="tool_agent", llm_model= gpt_model, tools = [get_result_sum])
     router_agent = LLMAgent(name="router_agent", llm_model= gpt_model)
