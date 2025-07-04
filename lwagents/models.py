@@ -132,16 +132,16 @@ class LLamaModel(BaseLLMModel):
 # 6. LLMFactory to create model instances on demand
 # -------------------------------------------------
 
-class LLMFactory:
-    def create_model(self, model_type: str, *args, **kwargs) -> LLMModel:
-        if model_type.lower() == "gpt":
-            loader = GPTModelLoader.load_model(api_key=kwargs['openai_api_key'], *args, **kwargs)
-            return GPTModel(loader)
-        elif model_type.lower() == "llama":
-            loader = LLamaModelLoader(kwargs['model_path'])
-            return LLamaModel(loader)
-        else:
-            raise ValueError(f"Unsupported model type: {model_type}")
+
+def create_model(model_type: str, *args, **kwargs) -> LLMModel:
+    if model_type.lower() == "gpt":
+        loader = GPTModelLoader.load_model(api_key=kwargs['openai_api_key'], *args, **kwargs)
+        return GPTModel(loader)
+    elif model_type.lower() == "llama":
+        loader = LLamaModelLoader(kwargs['model_path'])
+        return LLamaModel(loader)
+    else:
+        raise ValueError(f"Unsupported model type: {model_type}")
         
 
 class BaseMessage(BaseModel):

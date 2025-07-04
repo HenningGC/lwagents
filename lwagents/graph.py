@@ -6,6 +6,7 @@ from typing import Literal, Optional, Dict, List, Optional, Tuple, Any
 from typing_extensions import Self, override
 from enum import Enum
 
+
 class NodeKind(str, Enum):
     START = "START"
     STATE = "STATE"
@@ -51,27 +52,20 @@ class DirectTraversal:
     """
     def __init__(self, target_node_name: str):
         self.target_node_name = target_node_name
-
-def node_router(func):
-    """
-    Decorator to wrap the result of a function with DirectTraversal.
-
-    Args:
-        func (callable): The function to decorate.
-
-    Returns:
-        callable: The wrapped function.
-    """
-    def wrapper(*args, **kwargs):
-        result = func(*args, **kwargs)
-        if isinstance(result, str):
-            return DirectTraversal(target_node_name=result)
-        return result
-    return wrapper
-
-
+        
+class GraphRequest(BaseModel):
+    commands: Optional[List[SkipValidation[callable]]] = Field(None, description="The callback functions to execute")
+    parameters: Optional[Dict[str, Dict[str, Any]]] = Field(default_factory=dict, description="Parameters for the command")
+    result: Optional[Any] = Field(None, description="The result of the command")
+    traversal: Optional[str] = Field(None, description="The traversal to the next node")
+    update_additional_log_entries: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional log entries to update with new values. The key is the name of the log entry and the value is the new value")
+    class Config:
+        arbitrary_types_allowed = True
 class GraphException(Exception):
     pass
+
+class DirectTraversalRequest(BaseModel):
+    traversal: str = Field(..., description="The traversal to the next node")
 
 class BaseGraph:
     _current_graph = None  # Tracks the active graph context
@@ -198,29 +192,37 @@ class Graph(BaseGraph):
             if streaming:
                 print(f"Current_Node: {current_node.node_name}, Kind: {current_node.kind}")
 
-            result = None
+            execution_result = None
+            direct_traversal_request = None
             if current_node.command:
-                result = current_node.command(**current_node.parameters)
+                execution_result = current_node.command(**current_node.parameters)
+                if isinstance(execution_result, GraphRequest):
+                    if execution_result.commands:
+                        for command in execution_result.commands:
+                            command(**execution_result.parameters)
+                    if execution_result.update_additional_log_entries:
+                        additional_log_entries.update(execution_result.update_additional_log_entries)
+                    if execution_result.traversal:
+                        direct_traversal_request = DirectTraversalRequest(traversal=execution_result.traversal)
                 if streaming:
-                    print(f"{current_node.node_name} executed its command. Result: {result}")
+                    print(f"{current_node.node_name} executed its command. Result: {execution_result}")
 
             log_entry = {
                 "step_number": step_number,
                 "node_name": current_node.node_name,
                 "node_kind": current_node.kind,
-                "command_result": result,
+                "command_result": execution_result,
                 "transition": None,
                 **additional_log_entries
             }
-
-            self._GraphState.update_state(**log_entry)
 
             if streaming:
                 print("State Global History", self._GraphState.history)
 
             next_node = None
-            if isinstance(result, DirectTraversal):
-                target_node_name = result.target_node_name
+            
+            if direct_traversal_request:
+                target_node_name = direct_traversal_request.traversal
                 if streaming:
                     print(f"Direct traversal to node: {target_node_name}")
                 next_node = None
@@ -253,6 +255,7 @@ class Graph(BaseGraph):
                         log_entry["transition"] = (edge.edge_name, connected_node.node_name)
                         break
 
+            self._GraphState.update_state(**log_entry)
             if streaming:
                 if next_node:
                     print(f"Traversing to Node: {next_node.node_name} through Edge: {edge.edge_name}")

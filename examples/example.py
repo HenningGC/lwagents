@@ -23,7 +23,7 @@ def get_division():
 def search_internet():
     return "RESULTS HAVE BEEN VERIFIED"
 
-@node_router
+
 def test_router(agent):
     global_state = get_global_agent_state()
     prompt =[{"role": "system", "content": "You are an agent router and you decide which node to travel to next based on the task and results thus far. Your next answer must only return the node name."},
@@ -33,17 +33,15 @@ def test_router(agent):
     # You can also access global state here to see all agent activities
     #print(f"Router agent executed. Total agent actions: {len(global_state.history)}")
     
-    return result.content
+    return GraphRequest(result=result.content, traversal=result.content)
 
 if __name__ == "__main__":
     load_dotenv()
     
     # Reset global state at the beginning (optional, good for testing)
     reset_global_agent_state()
-    
-    factory = LLMFactory()
 
-    gpt_model = factory.create_model("gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
+    gpt_model = create_model(model_type="gpt",openai_api_key = os.getenv('OPENAI_API_KEY'))
 
     tool_agent = LLMAgent(name="tool_agent", llm_model= gpt_model, tools = [get_result_sum])
     router_agent = LLMAgent(name="router_agent", llm_model= gpt_model)
