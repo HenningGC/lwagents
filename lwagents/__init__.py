@@ -15,7 +15,7 @@ from .tools import Tool
 from .models import create_model
 
 # Keep decorators and special functions at top level
-from .graph import node_router, DirectTraversal
+from .graph import GraphRequest
 
 __all__ = [
     # Modules (for advanced users who want lwagents.state.something)
