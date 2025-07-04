@@ -41,6 +41,9 @@ class State(ABC):
             raise InvalidSchemaError(f"State entry keys do not match the schema. Expected keys: {self.history[-1].keys()}, Got keys: {state_entry.keys()}")
     def get_history(self) -> List:
         return self.history
+    
+    def get_last_entry(self) -> dict:
+        return self.history[-1]
 
 # Concrete Implementation
 class AgentState(State):
@@ -157,6 +160,14 @@ class GlobalAgentState(State):
         if enforce_schema:
             self.enforce_schema(state_entry)
         self.history.append(state_entry)
+
+    @override
+    def get_last_entry(self, inner_content=False) -> dict:
+        if not self.history:
+            raise IndexError("History is empty")
+        if inner_content:
+            return {"request":self.history[-1]['entry'].AgentRequest.content, "response":self.history[-1]['entry'].AgentResponse.content}
+        return self.history[-1]
 
 _global_agent_state = GlobalAgentState()
 
