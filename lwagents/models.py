@@ -53,7 +53,7 @@ class GPTModelLoader:
 
     def load_model(api_key, *args, **kwargs)->OpenAI:
         
-        return OpenAI(api_key= api_key, *args)
+        return OpenAI(api_key= api_key, *args, **kwargs)
 
 class LLamaModelLoader:
     def __init__(self, model_path: str):
@@ -71,7 +71,7 @@ class LLamaModelLoader:
 
 class GPTModel(BaseLLMModel):
     @override
-    def generate(self, model_name: str = "gpt-4o-mini", messages: List[Dict[str, str]] | None = None, structure: BaseModel | None = None, tools: Dict[str,callable] | None = None):
+    def generate(self, model_name: str = "gpt-4o-mini", messages: List[Dict[str, str]] | None = None, structure: BaseModel | None = None, tools: Dict[str,callable] | None = None, **kwargs):
         """
         Generates a response using the LLM, dynamically integrating tools.
         
@@ -135,7 +135,7 @@ class LLamaModel(BaseLLMModel):
 
 def create_model(model_type: str, *args, **kwargs) -> LLMModel:
     if model_type.lower() == "gpt":
-        loader = GPTModelLoader.load_model(api_key=kwargs['openai_api_key'], *args, **kwargs)
+        loader = GPTModelLoader.load_model(*args, **kwargs)
         return GPTModel(loader)
     elif model_type.lower() == "llama":
         loader = LLamaModelLoader(kwargs['model_path'])
