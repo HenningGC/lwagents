@@ -136,6 +136,7 @@ class LLamaModel(BaseLLMModel):
 def create_model(model_type: str, *args, **kwargs) -> LLMModel:
     if model_type.lower() == "gpt":
         loader = GPTModelLoader.load_model(*args, **kwargs)
+
         return GPTModel(loader)
     elif model_type.lower() == "llama":
         loader = LLamaModelLoader(kwargs['model_path'])
