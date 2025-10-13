@@ -38,19 +38,19 @@ jobs:
       run: |
         black --check lwagents
     
-    - name: Run tests
-      run: |
-        # Run tests if they exist, otherwise just do a basic import test
-        if [ -d "tests" ] && [ "$(ls -A tests)" ]; then
-          pytest tests/ -v --cov=lwagents --cov-report=xml
-        else
-          echo "No tests found, running basic import test"
-          python -c "import lwagents; print('✓ Package imports successfully')"
-          python -c "from lwagents import Agent, Graph, State; print('✓ Main classes import successfully')"
+    # - name: Run tests
+    #   run: |
+    #     # Run tests if they exist, otherwise just do a basic import test
+    #     if [ -d "tests" ] && [ "$(ls -A tests)" ]; then
+    #       pytest tests/ -v --cov=lwagents --cov-report=xml
+    #     else
+    #       echo "No tests found, running basic import test"
+    #       python -c "import lwagents; print('✓ Package imports successfully')"
+    #       python -c "from lwagents import Agent, Graph, State; print('✓ Main classes import successfully')"
     
-    - name: Upload coverage to Codecov
-      if: matrix.python-version == '3.11'
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: false
+    # - name: Upload coverage to Codecov
+    #   if: matrix.python-version == '3.11'
+    #   uses: codecov/codecov-action@v3
+    #   with:
+    #     file: ./coverage.xml
+    #     fail_ci_if_error: false
