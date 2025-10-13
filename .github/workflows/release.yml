@@ -1,0 +1,108 @@
+name: Release to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v0.1.0, v1.0.0, etc.
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install pytest pytest-cov
+    
+    - name: Run tests
+      run: |
+        # Run tests if they exist, otherwise just do a basic import test
+        if [ -d "tests" ] && [ "$(ls -A tests)" ]; then
+          pytest tests/ -v
+        else
+          python -c "import lwagents; print('Package imports successfully')"
+        fi
+
+  build-and-publish:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+    
+    - name: Extract version from tag
+      id: get_version
+      run: |
+        echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+    
+    - name: Update version in pyproject.toml
+      run: |
+        sed -i 's/version = ".*"/version = "${{ steps.get_version.outputs.VERSION }}"/' pyproject.toml
+    
+    - name: Build package
+      run: python -m build
+    
+    - name: Check package
+      run: python -m twine check dist/*
+    
+    - name: Publish to Test PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+      run: |
+        python -m twine upload --repository testpypi dist/* || echo "Test PyPI upload failed, continuing to production PyPI"
+    
+    - name: Publish to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        python -m twine upload dist/*
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_version.outputs.TAG_NAME }}
+        name: Release ${{ steps.get_version.outputs.TAG_NAME }}
+        body: |
+          ## Changes in this Release
+          
+          - Automated release for version ${{ steps.get_version.outputs.VERSION }}
+          - Package published to PyPI: https://pypi.org/project/lwagents/${{ steps.get_version.outputs.VERSION }}/
+          
+          ## Installation
+          
+          ```bash
+          pip install lwagents==${{ steps.get_version.outputs.VERSION }}
+          ```
+          
+          See the [repository](https://github.com/HenningGC/lwagents) for detailed documentation and examples.
+        files: |
+          dist/*
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
