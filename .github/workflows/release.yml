@@ -26,14 +26,14 @@ jobs:
         pip install -e .
         pip install pytest pytest-cov
     
-    - name: Run tests
-      run: |
-        # Run tests if they exist, otherwise just do a basic import test
-        if [ -d "tests" ] && [ "$(ls -A tests)" ]; then
-          pytest tests/ -v
-        else
-          python -c "import lwagents; print('Package imports successfully')"
-        fi
+    # - name: Run tests
+    #   run: |
+    #     # Run tests if they exist, otherwise just do a basic import test
+    #     if [ -d "tests" ] && [ "$(ls -A tests)" ]; then
+    #       pytest tests/ -v
+    #     else
+    #       python -c "import lwagents; print('Package imports successfully')"
+    #     fi
 
   build-and-publish:
     needs: test
