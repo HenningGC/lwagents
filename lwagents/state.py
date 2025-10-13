@@ -1,8 +1,8 @@
 # from models import Message, History
-from typing import TypedDict, Annotated, Sequence, List, Optional, TYPE_CHECKING
-from typing_extensions import Self, override
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Annotated, List, Optional, Sequence, TypedDict
 
+from typing_extensions import Self, override
 
 if TYPE_CHECKING:
     from .agent import Agent

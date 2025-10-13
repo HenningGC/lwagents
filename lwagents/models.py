@@ -1,12 +1,12 @@
-from openai import OpenAI
-import openai
-from pydantic import BaseModel
-from abc import ABC, abstractmethod
-from typing import Any, Protocol, List, Dict
-from typing_extensions import Self, override
 import os
-from dotenv import load_dotenv
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Protocol
 
+import openai
+from dotenv import load_dotenv
+from openai import OpenAI
+from pydantic import BaseModel
+from typing_extensions import Self, override
 
 # -------------------------------
 # 1. The LLMModel interface
