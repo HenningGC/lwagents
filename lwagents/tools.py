@@ -1,7 +1,8 @@
-from abc import ABC, abstractmethod
 import inspect
+from abc import ABC, abstractmethod
+from typing import Any, List, get_type_hints
+
 from pydantic import BaseModel, Field
-from typing import Any, get_type_hints, List
 
 
 class BaseTool(ABC):
@@ -9,6 +10,7 @@ class BaseTool(ABC):
     def execute(self, *args, **kwargs):
         """Execute the tool with the given arguments."""
         pass
+
 
 def Tool(func):
     """
@@ -21,14 +23,16 @@ def Tool(func):
     annotations = {}
     for param_name, param in signature.parameters.items():
         # Ensure every parameter has a type annotation
-        param_type = param.annotation if param.annotation is not inspect.Parameter.empty else Any
+        param_type = (
+            param.annotation if param.annotation is not inspect.Parameter.empty else Any
+        )
 
         # Determine the default value or make it required
         if param.default is not inspect.Parameter.empty:
             schema_dict[param_name] = Field(default=param.default)
         else:
             schema_dict[param_name] = Field(...)
-        
+
         # Add to annotations for Pydantic
         annotations[param_name] = param_type
 
@@ -38,8 +42,8 @@ def Tool(func):
         (BaseModel,),
         {
             "__annotations__": annotations,  # Explicitly define type annotations
-            **schema_dict,                   # Include Field definitions
-        }
+            **schema_dict,  # Include Field definitions
+        },
     )
 
     # Define the tool class
@@ -48,11 +52,14 @@ def Tool(func):
 
         def __init__(self):
             self._function = func
-            
+
         def execute(self, **kwargs):
             # Validate input arguments using the generated schema
             validated_args = self.schema(**kwargs)
             return self._function(**validated_args.dict())
-    FunctionTool.__name__ = func.__name__  # Name the class after the function for clarity
+
+    FunctionTool.__name__ = (
+        func.__name__
+    )  # Name the class after the function for clarity
 
     return FunctionTool()

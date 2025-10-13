@@ -1,22 +1,24 @@
-from openai import OpenAI
-import openai
-from pydantic import BaseModel
-from abc import ABC, abstractmethod
-from typing import Any, Protocol, List, Dict
-from typing_extensions import Self, override
 import os
-from dotenv import load_dotenv
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Protocol
 
+import openai
+from dotenv import load_dotenv
+from openai import OpenAI
+from pydantic import BaseModel
+from typing_extensions import Self, override
 
 # -------------------------------
 # 1. The LLMModel interface
 # -------------------------------
+
 
 class LLMModel(ABC):
     @abstractmethod
     def generate(self, prompt: str, max_tokens: int = 50) -> str:
         """Generate text given a prompt."""
         pass
+
 
 # ------------------------------------
 # 2. A Protocol for Model Loaders
@@ -25,6 +27,7 @@ class ModelLoader(Protocol):
     def load_model(self) -> Any:
         """Load and return the internal model object."""
         pass
+
 
 # ---------------------------------
 # 3. Base class for LLM models
@@ -45,15 +48,18 @@ class BaseLLMModel(LLMModel):
         """
         pass
 
+
 # ------------------------------------
 # 4. Concrete model loader classes
 # ------------------------------------
 
+
 class GPTModelLoader:
 
-    def load_model(api_key, *args, **kwargs)->OpenAI:
-        
-        return OpenAI(api_key= api_key, *args, **kwargs)
+    def load_model(api_key, *args, **kwargs) -> OpenAI:
+
+        return OpenAI(api_key=api_key, *args, **kwargs)
+
 
 class LLamaModelLoader:
     def __init__(self, model_path: str):
@@ -65,16 +71,25 @@ class LLamaModelLoader:
         # return LLamaModelObject(...loaded from path...)
         return "LLamaModelObject"
 
+
 # ----------------------------------
 # 5. Concrete model implementations
 # ----------------------------------
 
+
 class GPTModel(BaseLLMModel):
     @override
-    def generate(self, model_name: str = "gpt-4o-mini", messages: List[Dict[str, str]] | None = None, structure: BaseModel | None = None, tools: Dict[str,callable] | None = None, **kwargs):
+    def generate(
+        self,
+        model_name: str = "gpt-4o-mini",
+        messages: List[Dict[str, str]] | None = None,
+        structure: BaseModel | None = None,
+        tools: Dict[str, callable] | None = None,
+        **kwargs,
+    ):
         """
         Generates a response using the LLM, dynamically integrating tools.
-        
+
         Args:
             model_name (str): The name of the LLM model.
             messages (List[Dict[str, str]]): The conversation messages.
@@ -85,7 +100,9 @@ class GPTModel(BaseLLMModel):
         """
         # try:
         if tools and structure:
-            raise Warning("Tool calling with structured output is currently incompatible!")
+            raise Warning(
+                "Tool calling with structured output is currently incompatible!"
+            )
         openai_tools = []
         if tools:
             for tool in tools or []:
@@ -93,31 +110,29 @@ class GPTModel(BaseLLMModel):
                 tool_schema = func.schema
                 openai_tool = openai.pydantic_function_tool(tool_schema)
                 openai_tools.append(openai_tool)
-            
+
         if structure:
             completion = self._model.beta.chat.completions.parse(
-            model=model_name,
-            messages=messages,
-            response_format=structure
-        )
+                model=model_name, messages=messages, response_format=structure
+            )
         else:
             if tools:
                 completion = self._model.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=messages,
                     tools=openai_tools,
-                    tool_choice="required"
+                    tool_choice="required",
                 )
 
             else:
                 completion = self._model.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages)
+                    model="gpt-4o-mini", messages=messages
+                )
 
-            
-        return completion.choices[0].message#.content
+        return completion.choices[0].message  # .content
         # except Exception as e:
         #     return f"Error: {str(e)}"
+
 
 class LLamaModel(BaseLLMModel):
     def generate(self, prompt: str, max_tokens: int = 50) -> str:
@@ -139,17 +154,19 @@ def create_model(model_type: str, *args, **kwargs) -> LLMModel:
 
         return GPTModel(loader)
     elif model_type.lower() == "llama":
-        loader = LLamaModelLoader(kwargs['model_path'])
+        loader = LLamaModelLoader(kwargs["model_path"])
         return LLamaModel(loader)
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
-        
+
 
 class BaseMessage(BaseModel):
     message: str
 
+
 class GPTMessage(BaseMessage):
     pass
+
 
 class History(BaseModel):
     messages: List[BaseMessage]
