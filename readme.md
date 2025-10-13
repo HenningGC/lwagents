@@ -1,4 +1,6 @@
-![image](https://github.com/user-attachments/assets/939a7ad6-f572-4abf-a3db-12030d670ef0)
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/939a7ad6-f572-4abf-a3db-12030d670ef0" alt="LWAgents Logo" width="400">
+</div>
 
 # LWAgents: A Library for Graph-Driven AI Agents with Tool Integration
 
@@ -42,29 +44,31 @@ Whether you're designing task-oriented AI systems, probabilistic workflows, or i
 ### Using pip
 To install the library, run:
 
-```
+```bash
 pip install lwagents
 ```
-From Source
+
+### From Source
 To install the library from source:
 
 Clone the repository:
-```
+```bash
 git clone https://github.com/HenningGC/lwagents.git
 ```
 Navigate to the project directory:
-```
+```bash
 cd lwagents
 ```
 Install the package in editable mode:
-```
+```bash
 pip install -e .
 ```
-### Basic Usage
-Define a Simple Workflow
-Define Nodes and Edges: Nodes represent tasks, and edges define transitions between them.
+## Basic Usage
 
-```
+### Define a Simple Workflow
+**Define Nodes and Edges:** Nodes represent tasks, and edges define transitions between them.
+
+```python
 from lwagents import Graph, Node, Edge
 
 def print_task(val):
@@ -78,29 +82,29 @@ end_node = Node(node_name="end", kind="TERMINAL")
 edge1 = Edge(edge_name="to_task")
 edge2 = Edge(edge_name="to_end")
 ```
-Create a Graph: Connect nodes with edges to define transitions.
-```
+
+**Create a Graph:** Connect nodes with edges to define transitions.
+```python
 with Graph(state=YourGlobalState) as graph:
     start_node.connect(to_node=task_node, edge=edge1)
     task_node.connect(to_node=end_node, edge=edge1)
-
-
 ```
-Run the Workflow: Execute the graph starting from the START node.
-```
+
+**Run the Workflow:** Execute the graph starting from the START node.
+```python
 graph.run(start_node=start_node, streaming=True)
 ```
 
-### Advanced Features
-AI Agents for Decision-Making
+## Advanced Features
+
+### AI Agents for Decision-Making
 Integrate AI agents (like OpenAI's GPT) to dynamically route or execute tasks:
 
-```
-from lwagents import LLMAgent, LLMFactory
+```python
+from lwagents import LLMAgent, create_model
 
 # Initialize an LLM model
-factory = LLMFactory()
-llm_model = factory.create_model("gpt", openai_api_key="your_openai_api_key")
+llm_model = create_model("gpt", api_key="your_openai_api_key")
 agent = LLMAgent(name="my_agent", llm_model=llm_model)
 
 # Use the agent in a node
@@ -112,10 +116,10 @@ decision_node = Node(
 )
 ```
 
-Global Agent State Management
+### Global Agent State Management
 Access and manage global agent state across your workflow:
 
-```
+```python
 from lwagents.state import get_global_agent_state, reset_global_agent_state
 
 # Reset global state at the beginning (optional, good for testing)
@@ -129,33 +133,43 @@ print(f"Total agent actions performed: {len(global_state.history)}")
 global_state.print_history()
 ```
 
-Tools for Task Execution
+### Tools for Task Execution
 Define custom tools for your agents to use:
 
-```
+```python
 from lwagents import Tool
 
 @Tool
-def calculate_sum(a, b):
+def calculate_sum(a: int, b: int) -> int:
     return a + b
 
 # Use the tool in a node
 agent = LLMAgent(name="tool_agent", llm_model=llm_model, tools=[calculate_sum])
-
 ```
 
-Node Routing
-Explicitly define router nodes that use global agent state.
+### Dynamic Node Routing
+Define router nodes that use global agent state to make intelligent routing decisions:
 
-```
-@node_router
-def test_router(agent):
+```python
+from lwagents import GraphRequest
+
+def intelligent_router(agent):
     global_state = get_global_agent_state()
-    prompt =[{"role": "system", "content": "You are an agent router and your task is to decide which node to travel to next based on the task and results thus far. Your next answer must only return the node name."},
-     {"role": "user", "content": f"You have the following nodes at your disposal: get_division, search_internet, get_sum, end. You have to decide in which order you will visit each node based on this objective: get sum, then divide and search on the internet. These are the results thus far: {global_state.history}"}]
-    result = agent.action(prompt = prompt)
-
-    return result.content
+    prompt = [
+        {
+            "role": "system", 
+            "content": "You are an agent router. Decide which node to visit next based on the task and results so far. Return only the node name."
+        },
+        {
+            "role": "user", 
+            "content": f"Available nodes: get_division, search_internet, get_sum, end. "
+                      f"Objective: get sum, then divide and search on the internet. "
+                      f"Results so far: {global_state.history}"
+        }
+    ]
+    result = agent.action(prompt=prompt)
+    
+    return GraphRequest(result=result.content, traversal=result.content)
 ```
 ## Project Structure
 
@@ -169,23 +183,34 @@ lwagents/
 │   ├── tools.py            # Tooling and decorators
 │   ├── models.py           # Model-related code
 │   ├── messages.py         # Message classes for agent communication
-│   ├── logs.py             # Logging utilities
+│   └── logs.py             # Logging utilities
 ├── tests/                  # Test cases
 ├── examples/               # Example scripts
+├── .github/workflows/      # CI/CD automation
 ├── README.md               # Project documentation
 ├── pyproject.toml          # Build system requirements
-├── requirements.txt        # Dependencies for the library
 └── LICENSE                 # License for the library
 ```
-Contributing
+## Contributing
+
 Contributions are welcome! To contribute:
 
-Fork the repository.
-Create a new branch for your feature or bug fix.
-Submit a pull request.
+1. **Fork the repository**
+2. **Create a new branch** for your feature or bug fix
+3. **Submit a pull request**
+
+For more details, see our [contribution guidelines](CONTRIBUTING.md).
 
 ## License
-This project is licensed under the MIT License.
 
-Author
-HenningGC https://github.com/HenningGC
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+
+## Author
+
+**HenningGC** - [GitHub Profile](https://github.com/HenningGC)
+
+---
+
+<div align="center">
+  <strong>⭐ Star this repository if you find it useful!</strong>
+</div>
