@@ -12,13 +12,16 @@ class NodeKind(str, Enum):
     STATE = "STATE"
     TERMINAL = "TERMINAL"
 
+
 class Node(BaseModel):
     node_name: str = Field(..., description="The Node Name")
     kind: NodeKind = Field(..., description="The kind of the Node")
     command: Optional[callable] = None
-    parameters: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Parameters for the command")
+    parameters: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Parameters for the command"
+    )
 
-    def connect(self, to_node: Self, edge: 'Edge'):
+    def connect(self, to_node: Self, edge: "Edge"):
         """
         Connects this node to another node using the given edge.
 
@@ -39,33 +42,52 @@ class Node(BaseModel):
 
 class Edge(BaseModel):
     edge_name: str = Field(..., description="The Edge Name")
-    condition: Optional[callable] = Field(None, description="A function that determines if the transition is valid")
-    parameters: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Parameters for the function")
+    condition: Optional[callable] = Field(
+        None, description="A function that determines if the transition is valid"
+    )
+    parameters: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Parameters for the function"
+    )
 
     class Config:
         arbitrary_types_allowed = True
+
 
 class DirectTraversal:
     """
     Wrapper class for direct traversal instructions.
     Holds the name of the target node for traversal.
     """
+
     def __init__(self, target_node_name: str):
         self.target_node_name = target_node_name
-        
+
+
 class GraphRequest(BaseModel):
-    commands: Optional[List[SkipValidation[callable]]] = Field(None, description="The callback functions to execute")
-    parameters: Optional[Dict[str, Dict[str, Any]]] = Field(default_factory=dict, description="Parameters for the command")
+    commands: Optional[List[SkipValidation[callable]]] = Field(
+        None, description="The callback functions to execute"
+    )
+    parameters: Optional[Dict[str, Dict[str, Any]]] = Field(
+        default_factory=dict, description="Parameters for the command"
+    )
     result: Optional[Any] = Field(None, description="The result of the command")
     traversal: Optional[str] = Field(None, description="The traversal to the next node")
-    update_additional_log_entries: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional log entries to update with new values. The key is the name of the log entry and the value is the new value")
+    update_additional_log_entries: Optional[Dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Additional log entries to update with new values. The key is the name of the log entry and the value is the new value",
+    )
+
     class Config:
         arbitrary_types_allowed = True
+
+
 class GraphException(Exception):
     pass
 
+
 class DirectTraversalRequest(BaseModel):
     traversal: str = Field(..., description="The traversal to the next node")
+
 
 class BaseGraph:
     _current_graph = None  # Tracks the active graph context
@@ -94,7 +116,6 @@ class BaseGraph:
         if cls._current_graph is None:
             raise ValueError("No active graph context. Use 'with Graph() as graph:'")
         return cls._current_graph
-
 
 
 @dataclass
@@ -129,7 +150,13 @@ class Graph(BaseGraph):
         """
         return self._graphDict.get(node, [])
 
-    def construct_graph(self, graph_dict: Dict['Node', List[Dict['Node', 'Edge']]], start_name: str, *args, **kwargs):
+    def construct_graph(
+        self,
+        graph_dict: Dict["Node", List[Dict["Node", "Edge"]]],
+        start_name: str,
+        *args,
+        **kwargs,
+    ):
         """
         Constructs a graph from the provided dictionary.
 
@@ -146,29 +173,49 @@ class Graph(BaseGraph):
         """
         for node, edges in graph_dict.items():
             if not isinstance(node, Node):
-                raise TypeError(f"Graph key {node} must be of type Node. Got {type(node)} instead.")
+                raise TypeError(
+                    f"Graph key {node} must be of type Node. Got {type(node)} instead."
+                )
 
             if not isinstance(edges, list):
-                raise TypeError(f"Graph value for {node} must be of type List. Got {type(edges)} instead.")
+                raise TypeError(
+                    f"Graph value for {node} must be of type List. Got {type(edges)} instead."
+                )
 
             for edge in edges:
                 if not (isinstance(edge, dict) and len(edge) == 1):
-                    raise TypeError(f"Each edge in the list for node {node} must be a dictionary with one (Node, Edge) pair. Got {edge} instead.")
+                    raise TypeError(
+                        f"Each edge in the list for node {node} must be a dictionary with one (Node, Edge) pair. Got {edge} instead."
+                    )
 
                 connected_node, edge_obj = next(iter(edge.items()))
 
                 if not isinstance(connected_node, Node):
-                    raise TypeError(f"Key in edge dictionary must be of type Node. Got {type(connected_node)} instead.")
+                    raise TypeError(
+                        f"Key in edge dictionary must be of type Node. Got {type(connected_node)} instead."
+                    )
                 if not isinstance(edge_obj, Edge):
-                    raise TypeError(f"Value in edge dictionary must be of type Edge. Got {type(edge_obj)} instead.")
+                    raise TypeError(
+                        f"Value in edge dictionary must be of type Edge. Got {type(edge_obj)} instead."
+                    )
 
-            
             if node.node_name == start_name:
                 node.kind = "START"
 
-            self._graphDict[node] = [(connected_node, edge_obj) for edge in edges for connected_node, edge_obj in edge.items()]
-    
-    def run(self, start_node:Node, streaming=False, additional_log_entries: Dict={}, *args, **kwargs):
+            self._graphDict[node] = [
+                (connected_node, edge_obj)
+                for edge in edges
+                for connected_node, edge_obj in edge.items()
+            ]
+
+    def run(
+        self,
+        start_node: Node,
+        streaming=False,
+        additional_log_entries: Dict = {},
+        *args,
+        **kwargs,
+    ):
         """
         Executes the graph starting from the given start_node, with structured logging for each step.
 
@@ -183,14 +230,18 @@ class Graph(BaseGraph):
             print("Executing Graph...")
 
         if start_node.kind != "START":
-            raise GraphException(f"Chosen starting Node: {start_node.node_name} is not of type START")
+            raise GraphException(
+                f"Chosen starting Node: {start_node.node_name} is not of type START"
+            )
 
         current_node = start_node
-        step_number = 1 
+        step_number = 1
 
         while current_node.kind != "TERMINAL" and current_node is not None:
             if streaming:
-                print(f"Current_Node: {current_node.node_name}, Kind: {current_node.kind}")
+                print(
+                    f"Current_Node: {current_node.node_name}, Kind: {current_node.kind}"
+                )
 
             execution_result = None
             direct_traversal_request = None
@@ -201,11 +252,17 @@ class Graph(BaseGraph):
                         for command in execution_result.commands:
                             command(**execution_result.parameters)
                     if execution_result.update_additional_log_entries:
-                        additional_log_entries.update(execution_result.update_additional_log_entries)
+                        additional_log_entries.update(
+                            execution_result.update_additional_log_entries
+                        )
                     if execution_result.traversal:
-                        direct_traversal_request = DirectTraversalRequest(traversal=execution_result.traversal)
+                        direct_traversal_request = DirectTraversalRequest(
+                            traversal=execution_result.traversal
+                        )
                 if streaming:
-                    print(f"{current_node.node_name} executed its command. Result: {execution_result}")
+                    print(
+                        f"{current_node.node_name} executed its command. Result: {execution_result}"
+                    )
 
             log_entry = {
                 "step_number": step_number,
@@ -213,14 +270,14 @@ class Graph(BaseGraph):
                 "node_kind": current_node.kind,
                 "command_result": execution_result,
                 "transition": None,
-                **additional_log_entries
+                **additional_log_entries,
             }
 
             if streaming:
                 print("State Global History", self._GraphState.history)
 
             next_node = None
-            
+
             if direct_traversal_request:
                 target_node_name = direct_traversal_request.traversal
                 if streaming:
@@ -229,39 +286,60 @@ class Graph(BaseGraph):
                 for connected_node, edge in self._graphDict.get(current_node, []):
                     if connected_node.node_name == target_node_name:
                         next_node = connected_node
-                        log_entry["transition"] = (edge.edge_name, connected_node.node_name)
+                        log_entry["transition"] = (
+                            edge.edge_name,
+                            connected_node.node_name,
+                        )
                         break
                 if not next_node:
-                    raise GraphException(f"Direct traversal failed: Node {target_node_name} not found")
+                    raise GraphException(
+                        f"Direct traversal failed: Node {target_node_name} not found"
+                    )
             else:
                 for connected_node, edge in self._graphDict.get(current_node, []):
                     if edge.condition:
                         if streaming:
                             print(f"Executing edge condition on {edge.edge_name}")
-                        edge_result = edge.condition(**edge.parameters) if edge.parameters else edge.condition()
+                        edge_result = (
+                            edge.condition(**edge.parameters)
+                            if edge.parameters
+                            else edge.condition()
+                        )
 
                         if streaming:
-                            print(f"Edge {edge.edge_name} condition returned {edge_result}")
+                            print(
+                                f"Edge {edge.edge_name} condition returned {edge_result}"
+                            )
 
                         if not isinstance(edge_result, bool):
                             raise GraphException("Edge condition must return a Bool")
 
                         if edge_result:
                             next_node = connected_node
-                            log_entry["transition"] = (edge.edge_name, connected_node.node_name)
+                            log_entry["transition"] = (
+                                edge.edge_name,
+                                connected_node.node_name,
+                            )
                             break
                     else:
                         next_node = connected_node
-                        log_entry["transition"] = (edge.edge_name, connected_node.node_name)
+                        log_entry["transition"] = (
+                            edge.edge_name,
+                            connected_node.node_name,
+                        )
                         break
 
             self._GraphState.update_state(**log_entry)
             if streaming:
                 if next_node:
-                    print(f"Traversing to Node: {next_node.node_name} through Edge: {edge.edge_name}")
+                    print(
+                        f"Traversing to Node: {next_node.node_name} through Edge: {edge.edge_name}"
+                    )
 
             if not next_node:
-                raise GraphException(f"No valid transition from node: {current_node.node_name}")
+                raise GraphException(
+                    f"No valid transition from node: {current_node.node_name}"
+                )
 
             current_node = next_node
             step_number += 1

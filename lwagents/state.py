@@ -1,4 +1,4 @@
-#from models import Message, History
+# from models import Message, History
 from typing import TypedDict, Annotated, Sequence, List, Optional, TYPE_CHECKING
 from typing_extensions import Self, override
 from abc import ABC, abstractmethod
@@ -7,11 +7,14 @@ from abc import ABC, abstractmethod
 if TYPE_CHECKING:
     from .agent import Agent
 
+
 class InvalidSchemaError(Exception):
     pass
 
+
 class InvalidAgent(Exception):
     pass
+
 
 # Abstract Base Class
 class State(ABC):
@@ -22,6 +25,7 @@ class State(ABC):
     @abstractmethod
     def update_state(self, action: str) -> None:
         pass
+
     @override
     def print_history(self) -> None:
         """
@@ -38,12 +42,16 @@ class State(ABC):
 
     def enforce_schema(self, state_entry: dict) -> None:
         if self.history and self.history[-1].keys() != state_entry.keys():
-            raise InvalidSchemaError(f"State entry keys do not match the schema. Expected keys: {self.history[-1].keys()}, Got keys: {state_entry.keys()}")
+            raise InvalidSchemaError(
+                f"State entry keys do not match the schema. Expected keys: {self.history[-1].keys()}, Got keys: {state_entry.keys()}"
+            )
+
     def get_history(self) -> List:
         return self.history
-    
+
     def get_last_entry(self) -> dict:
         return self.history[-1]
+
 
 # Concrete Implementation
 class AgentState(State):
@@ -54,6 +62,7 @@ class AgentState(State):
         agent (Agent, optional): The current agent associated with the state.
         initial_history (list, optional): The initial history for the state.
     """
+
     def __init__(self, initial_history: Optional[List] = []):
         super().__init__(initial_history=initial_history)
         self.history = initial_history or []
@@ -70,31 +79,28 @@ class AgentState(State):
             raise InvalidAgent(
                 f"Agent {agent} must be of type Agent, got {type(agent)} instead."
             )
-        
+
     @override
     def print_history(self) -> None:
         return super().print_history()
-    
+
     @override
     def update_state(self, enforce_schema: Optional[bool] = False, **kwargs) -> None:
         """
         Updates the agent state with a new log entry.
         """
-        state_entry = {
-            **kwargs
-        }
+        state_entry = {**kwargs}
         if enforce_schema:
             self.enforce_schema(state_entry)
         self.history.append(state_entry)
         self.last_update = state_entry
 
-        
 
 class GraphState(State):
 
     def __init__(self, initial_history: Optional[List] = []):
         super().__init__(initial_history=initial_history)
-    
+
     def print_history(self) -> None:
         """
         Prints the State execution history in a more human-readable format.
@@ -109,14 +115,22 @@ class GraphState(State):
             print(f"  Node Name     : {step['node_name']}")
             print(f"  Node Kind     : {step['node_kind'].name}")
             print(f"  Command Result: {step['command_result']}")
-            if step['transition']:
-                edge_name, next_node = step['transition']
+            if step["transition"]:
+                edge_name, next_node = step["transition"]
                 print(f"  Transition    : via Edge '{edge_name}' to Node '{next_node}'")
             else:
                 print("  Transition    : None")
             additional_params = {
-                k: v for k, v in step.items()
-                if k not in {'step_number', 'node_name', 'node_kind', 'command_result', 'transition'}
+                k: v
+                for k, v in step.items()
+                if k
+                not in {
+                    "step_number",
+                    "node_name",
+                    "node_kind",
+                    "command_result",
+                    "transition",
+                }
             }
             if additional_params:
                 print("  Additional Parameters:")
@@ -125,7 +139,16 @@ class GraphState(State):
             print("-" * 50)
 
     @override
-    def update_state(self, step_number, node_name, node_kind, command_result, transition, enforce_schema: Optional[bool] = False, **kwargs) -> None:
+    def update_state(
+        self,
+        step_number,
+        node_name,
+        node_kind,
+        command_result,
+        transition,
+        enforce_schema: Optional[bool] = False,
+        **kwargs,
+    ) -> None:
         """
         Updates the agent state with a new log entry.
         """
@@ -135,10 +158,12 @@ class GraphState(State):
             "node_kind": node_kind,
             "command_result": command_result,
             "transition": transition,
-            **kwargs}
+            **kwargs,
+        }
         if enforce_schema:
             self.enforce_schema(state_entry)
         self.history.append(state_entry)
+
 
 class GlobalAgentState(State):
     def __init__(self, initial_history=None):
@@ -146,9 +171,16 @@ class GlobalAgentState(State):
 
     def print_history(self) -> None:
         return super().print_history()
-    
+
     @override
-    def update_state(self, agent_name, agent_kind, entry, enforce_schema: Optional[bool] = False, **kwargs) -> None:
+    def update_state(
+        self,
+        agent_name,
+        agent_kind,
+        entry,
+        enforce_schema: Optional[bool] = False,
+        **kwargs,
+    ) -> None:
         """
         Updates the agent state with a new log entry.
         """
@@ -156,7 +188,8 @@ class GlobalAgentState(State):
             "agent_name": agent_name,
             "agent_kind": agent_kind,
             "entry": entry,
-            **kwargs}
+            **kwargs,
+        }
         if enforce_schema:
             self.enforce_schema(state_entry)
         self.history.append(state_entry)
@@ -166,10 +199,15 @@ class GlobalAgentState(State):
         if not self.history:
             raise IndexError("History is empty")
         if inner_content:
-            return {"request":self.history[-1]['entry'].AgentRequest.content, "response":self.history[-1]['entry'].AgentResponse.content}
+            return {
+                "request": self.history[-1]["entry"].AgentRequest.content,
+                "response": self.history[-1]["entry"].AgentResponse.content,
+            }
         return self.history[-1]
 
+
 _global_agent_state = GlobalAgentState()
+
 
 def get_global_agent_state() -> GlobalAgentState:
     """
@@ -177,6 +215,7 @@ def get_global_agent_state() -> GlobalAgentState:
     This allows agents to access and update the global state.
     """
     return _global_agent_state
+
 
 def reset_global_agent_state() -> None:
     """
