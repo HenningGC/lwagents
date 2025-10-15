@@ -105,20 +105,29 @@ class GPTModel(BaseLLMModel):
             raise Warning(
                 "Tool calling with structured output is currently incompatible!"
             )
-        if tools:
-            openai_tools = ToolUtility.get_tools_info_gpt(tools)
+        
 
         if structure:
-            completion = self._model.beta.chat.completions.parse(
-                model=model_name, messages=prompt, response_format=structure, **kwargs
+            completion = self._model.responses.parse(
+                model=model_name, messages=prompt, text_format=structure, **kwargs
             )
-        else:
-            completion = self._model.chat.completions.create(
+            return LLMResponse(response=GPTResponse(response_content=completion.choices[0].message))
+        if tools:
+            openai_tools = ToolUtility.get_tools_info_gpt(tools)
+            completion = self._model.responses.create(
                 model=model_name,
-                system=system,
-                messages=prompt,
+                instructions=system,
+                input=prompt,
                 tools=openai_tools if tools else None,
                 tool_choice="required",
+                **kwargs,
+            )
+
+        else:
+            completion = self._model.responses.create(
+                model=model_name,
+                instructions=system,
+                input=prompt,
                 **kwargs,
             )
 
