@@ -64,7 +64,6 @@ class DirectTraversal:
     def __init__(self, target_node_name: str):
         self.target_node_name = target_node_name
 
-
 class GraphRequest(BaseModel):
     commands: Optional[List[SkipValidation[callable]]] = Field(
         None, description="The callback functions to execute"
@@ -276,14 +275,14 @@ class Graph(BaseGraph):
             }
 
             if streaming:
-                print("State Global History", self._GraphState.history)
+                print("📚 State Global History", self._GraphState.history)
 
             next_node = None
 
             if direct_traversal_request:
                 target_node_name = direct_traversal_request.traversal
                 if streaming:
-                    print(f"Direct traversal to node: {target_node_name}")
+                    print(f"➡️ Direct traversal to node: {target_node_name}")
                 next_node = None
                 for connected_node, edge in self._graphDict.get(current_node, []):
                     if connected_node.node_name == target_node_name:
@@ -295,7 +294,7 @@ class Graph(BaseGraph):
                         break
                 if not next_node:
                     raise GraphException(
-                        f"Direct traversal failed: Node {target_node_name} not found"
+                        f"🔴 Direct traversal failed: Node {target_node_name} not found 🔴"
                     )
             else:
                 for connected_node, edge in self._graphDict.get(current_node, []):

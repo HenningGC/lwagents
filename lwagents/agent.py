@@ -1,13 +1,14 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel
 from typing_extensions import Self, override
 
 from .messages import LLMAgentRequest, LLMAgentResponse, LLMEntry
 from .state import AgentState, State, get_global_agent_state
-from .tools import Tool
+from .tools import Tool, ToolUtility, ToolsExecutionResults
+
 
 
 class InvalidAgent(Exception):
@@ -45,39 +46,47 @@ class LLMAgent(Agent):
         self,
         name: str,
         llm_model,
-        tools=None,
-        state: Optional[AgentState] = AgentState(),
-    ):
+        tools: List = None,
+        model_name: str = None,
+        state: Optional[AgentState] = AgentState()
+        ):
         super().__init__(name=name, tools=tools, state=state)
         self.llm_model = llm_model
+        self.model_name = model_name
 
     @override
-    def action(self, prompt: str, state_entry: Optional[dict] = {}, *args, **kwargs):
+    def action(self, prompt: List[Dict[str, str]], state_entry: Optional[dict] = {}, use_model: str = None, system: str = None, *args, **kwargs):
         request = LLMAgentRequest(content=prompt)
+        if not use_model:
+            use_model = self.model_name
+        if not use_model:
+            raise ValueError("Model name must be specified either in agent or action call!")
         response = self.llm_model.generate(
-            messages=prompt, tools=self.tools, *args, **kwargs
+            model_name=use_model, prompt=prompt, tools=self.tools, system=system, *args, **kwargs
         )
-        tool_calls = response.tool_calls
-        if tool_calls:
-            for tool_call in tool_calls:
-                function_name = tool_call.function.name
-                function_to_call = self.tools[function_name]
-                function_args = json.loads(tool_call.function.arguments)
-                if function_args:
-                    function_response = function_to_call.execute(**function_args)
-                else:
-                    function_response = function_to_call.execute()
-                tool_response_content = {
-                    "tool_call_id": tool_call.id,
-                    "role": "tool",
-                    "name": function_name,
-                    "content": function_response,
-                }
+        result = None
+        if self.tools:
+            tool_execution_results = ToolUtility.execute_from_response(
+                tool_response=response, tools=self.tools
+            )
+            tool_results = []
+            if tool_execution_results:
+                for tool_execution_result in tool_execution_results.results:
+                    tool_response_content = {
+                        "tool_call_id": tool_execution_result.id,
+                        "name": tool_execution_result.name,
+                        "content": tool_execution_result.content
+                    }
+                    tool_results.append(tool_response_content)
 
                 result = LLMAgentResponse(
                     role="tool",
-                    content=str(tool_response_content.get("content", "")),
-                    tool_used=str(tool_response_content.get("function_name", None)),
+                    content=response.content,
+                    tools_used=[tr["name"] for tr in tool_results],
+                )
+            else:
+                result = LLMAgentResponse(
+                    role="assistant", content=response.content, tool_used=None
                 )
         else:
             result = LLMAgentResponse(

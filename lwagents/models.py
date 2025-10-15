@@ -5,8 +5,13 @@ from typing import Any, Dict, List, Protocol
 import openai
 from dotenv import load_dotenv
 from openai import OpenAI
+import anthropic
 from pydantic import BaseModel
 from typing_extensions import Self, override
+import json
+from .tools import ToolUtility
+
+from .messages import GPTResponse, AnthropicResponse, GPTResponse, LLMResponse
 
 # -------------------------------
 # 1. The LLMModel interface
@@ -48,28 +53,23 @@ class BaseLLMModel(LLMModel):
         """
         pass
 
-
 # ------------------------------------
 # 4. Concrete model loader classes
 # ------------------------------------
 
 
-class GPTModelLoader:
+class ModelLoader:
 
-    def load_model(api_key, *args, **kwargs) -> OpenAI:
+    @staticmethod
+    def load_model(model_type: str, api_key: str,*args, **kwargs) -> OpenAI:
+        
+        if model_type == "openai":
+            return OpenAI(api_key=api_key, *args, **kwargs)
+        elif model_type == "deepseek":
+            return OpenAI(api_key=api_key, base_url="https://api.deepseek.com", *args, **kwargs)
+        elif model_type == "anthropic":
+            return anthropic.Anthropic(api_key=api_key, *args, **kwargs)
 
-        return OpenAI(api_key=api_key, *args, **kwargs)
-
-
-class LLamaModelLoader:
-    def __init__(self, model_path: str):
-        self._model_path = model_path
-
-    def load_model(self):
-        # Pseudocode for loading a LLaMA model
-        print(f"[LLamaModelLoader] Loading LLaMA model from {self._model_path}...")
-        # return LLamaModelObject(...loaded from path...)
-        return "LLamaModelObject"
 
 
 # ----------------------------------
@@ -81,10 +81,12 @@ class GPTModel(BaseLLMModel):
     @override
     def generate(
         self,
-        model_name: str = "gpt-4o-mini",
-        messages: List[Dict[str, str]] | None = None,
+        model_name: str,
+        prompt: List[Dict[str, str]] | None = None,
         structure: BaseModel | None = None,
         tools: Dict[str, callable] | None = None,
+        system: str | None = None,
+        *args,
         **kwargs,
     ):
         """
@@ -103,44 +105,67 @@ class GPTModel(BaseLLMModel):
             raise Warning(
                 "Tool calling with structured output is currently incompatible!"
             )
-        openai_tools = []
-        if tools:
-            for tool in tools or []:
-                func = tools[tool]
-                tool_schema = func.schema
-                openai_tool = openai.pydantic_function_tool(tool_schema)
-                openai_tools.append(openai_tool)
+        
 
         if structure:
-            completion = self._model.beta.chat.completions.parse(
-                model=model_name, messages=messages, response_format=structure
+            completion = self._model.responses.parse(
+                model=model_name, messages=prompt, text_format=structure, **kwargs
             )
+            return LLMResponse(response=GPTResponse(response_content=completion.choices[0].message))
+        if tools:
+            openai_tools = ToolUtility.get_tools_info_gpt(tools)
+            completion = self._model.responses.create(
+                model=model_name,
+                instructions=system,
+                input=prompt,
+                tools=openai_tools if tools else None,
+                tool_choice="required",
+                **kwargs,
+            )
+
         else:
-            if tools:
-                completion = self._model.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=messages,
-                    tools=openai_tools,
-                    tool_choice="required",
-                )
+            completion = self._model.responses.create(
+                model=model_name,
+                instructions=system,
+                input=prompt,
+                **kwargs,
+            )
 
-            else:
-                completion = self._model.chat.completions.create(
-                    model="gpt-4o-mini", messages=messages
-                )
 
-        return completion.choices[0].message  # .content
+        return LLMResponse(response=GPTResponse(response_content=completion.choices[0].message))
         # except Exception as e:
         #     return f"Error: {str(e)}"
 
+class DeepSeekModel(GPTModel):
+    pass
 
-class LLamaModel(BaseLLMModel):
-    def generate(self, prompt: str, max_tokens: int = 50) -> str:
-        print("[LLamaModel] Generating text...")
-        # Pseudocode for calling the actual LLaMA model:
-        # output = self._model.generate(prompt, max_tokens)
-        # return output
-        return f"LLaMA response to '{prompt[:20]}...' with max_tokens={max_tokens}"
+class AnthropicModel(BaseLLMModel):
+    @override
+    def generate(self, model_name: str,  prompt: List[Dict[str, str]] | None = None, tools: Dict[str, callable] | None = None, system: str = None, *args, **kwargs):
+
+        if kwargs.get("structure"):
+            raise Warning("Structured output is currently incompatible with Anthropic!")
+
+        if tools:
+            anthropic_tools = ToolUtility.get_tools_info_anthropic(tools=tools)
+            message = self._model.messages.create(
+                model=model_name,
+                system=system,
+                messages=prompt,
+                tools=anthropic_tools,
+                max_tokens=kwargs.get("max_tokens", 200),
+                *args,
+                **kwargs)
+        else:
+            message = self._model.messages.create(
+                model=model_name,
+                system=system,
+                messages=prompt,
+                max_tokens=kwargs.get("max_tokens", 200),
+                *args,
+                **kwargs)
+
+        return LLMResponse(response=AnthropicResponse(response_message=message))
 
 
 # -------------------------------------------------
@@ -149,24 +174,12 @@ class LLamaModel(BaseLLMModel):
 
 
 def create_model(model_type: str, *args, **kwargs) -> LLMModel:
-    if model_type.lower() == "gpt":
-        loader = GPTModelLoader.load_model(*args, **kwargs)
 
+    loader = ModelLoader.load_model(model_type=model_type, *args, **kwargs)
+
+    if model_type == "openai":
         return GPTModel(loader)
-    elif model_type.lower() == "llama":
-        loader = LLamaModelLoader(kwargs["model_path"])
-        return LLamaModel(loader)
-    else:
-        raise ValueError(f"Unsupported model type: {model_type}")
-
-
-class BaseMessage(BaseModel):
-    message: str
-
-
-class GPTMessage(BaseMessage):
-    pass
-
-
-class History(BaseModel):
-    messages: List[BaseMessage]
+    elif model_type == "deepseek":
+        return DeepSeekModel(loader)
+    elif model_type == "anthropic":
+        return AnthropicModel(loader)
