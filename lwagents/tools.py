@@ -8,16 +8,20 @@ import openai
 
 from lwagents.messages import AnthropicResponse, GPTResponse
 
+
 class ToolExecutionError(Exception):
     pass
+
 
 class ToolExecutionResult(BaseModel):
     id: str
     name: str
     content: Any
 
+
 class ToolsExecutionResults(BaseModel):
     results: List[ToolExecutionResult]
+
 
 class BaseTool(ABC):
     @abstractmethod
@@ -98,6 +102,7 @@ class ToolUtility:
             model_tool = openai.pydantic_function_tool(tool_schema)
             model_tools.append(model_tool)
         return model_tools
+
     @staticmethod
     def get_tools_info_anthropic(tools: Dict[str, callable]) -> List[BaseModel]:
         """
@@ -117,7 +122,7 @@ class ToolUtility:
 
             model_tool_function = model_tool["function"]
             model_tool_function_params = model_tool_function["parameters"]["properties"]
-            
+
             # Transform properties to remove 'title' and keep only type and description
             anthropic_properties = {}
             for param_name, param_schema in model_tool_function_params.items():
@@ -126,28 +131,33 @@ class ToolUtility:
                 }
                 # Add description if it exists (title can serve as description)
                 if "title" in param_schema:
-                    anthropic_properties[param_name]["description"] = param_schema["title"]
-            
+                    anthropic_properties[param_name]["description"] = param_schema[
+                        "title"
+                    ]
+
             anthropic_tool = {
                 "name": model_tool_function["name"],
-                "description": model_tool_function.get("description", model_tool_function["name"]),
+                "description": model_tool_function.get(
+                    "description", model_tool_function["name"]
+                ),
                 "input_schema": {
                     "type": model_tool_function["parameters"]["type"],
                     "properties": anthropic_properties,
-                    "required": model_tool_function["parameters"].get("required", [])
-                }
+                    "required": model_tool_function["parameters"].get("required", []),
+                },
             }
-
 
             model_tools.append(anthropic_tool)
         return model_tools
-    
+
     @classmethod
     def execute_from_response(cls, tool_response: Any, tools: dict) -> Any:
         if type(tool_response.response) == GPTResponse:
             return cls.execute_gpt_tools_from_response(tool_response.content, tools)
         elif type(tool_response.response) == AnthropicResponse:
-            return cls.execute_anthropic_tools_from_response(response=tool_response.response.response_message, tools=tools)
+            return cls.execute_anthropic_tools_from_response(
+                response=tool_response.response.response_message, tools=tools
+            )
         else:
             raise ValueError("Unsupported response type")
 
@@ -176,7 +186,7 @@ class ToolUtility:
             for c in response.content:
                 if c.type == "tool_use":
                     tool_name = c.name
-                    tool_args =c.input
+                    tool_args = c.input
 
                     if tool_name in tools:
                         if tool_args:
