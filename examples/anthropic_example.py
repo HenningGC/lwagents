@@ -3,13 +3,15 @@ from lwagents.state import get_global_agent_state, reset_global_agent_state
 from dotenv import load_dotenv
 import os
 
+from pydantic import BaseModel, Field
+
 @Tool
 def get_result_sum(val1: int,val2: int):
     return val1+val2
 
 def get_sum(agent):
-    result = agent.action(system = "You are an helpful assistant that uses his tools at their disposal", prompt= [{"role": "user", "content":"Use the get_result_sum tool to sum 300+140"}], use_model="gpt-5-mini" ,temperature=0.8)
-    
+    result = agent.action(system = "You are an helpful assistant that uses his tools at their disposal", prompt= [{"role": "user", "content":"Use the get_result_sum tool to sum 300+140"}], use_model="claude-sonnet-4-5" ,temperature=0.8)
+
     # Access the global agent state to see what agents have done
     global_state = get_global_agent_state()
     print(f"Global agent actions so far: {len(global_state.history)} actions")
@@ -25,10 +27,12 @@ def search_internet():
 
 def test_router(agent):
     global_state = get_global_agent_state()
-    prompt =[{"role": "system", "content": "You are an agent router and you decide which node to travel to next based on the task and results thus far. Your next answer must only return the node name."},
-     {"role": "user", "content": f"You have the following nodes at your disposal: get_division, search_internet, get_sum, end. You have to decide the sequence of nodes to travel to based on based on this objective: get sum, then divide and search on the internet. These are the results thus far: {global_state.history}"}]
-    result = agent.action(prompt = prompt, use_model="gpt-4o-mini")
-    
+
+    system = "You are an agent router and you decide which node to travel to next based on the task and results thus far. You have to decide the sequence of nodes to travel to based on based on this objective: get sum, then divide and search on the internet."
+    prompt = [{"role": "user", "content": f"You have the following nodes at your disposal: get_division, search_internet, get_sum, end. These are the results thus far: {global_state.history}. Your next answer must only return the node name. NEXT NODE NAME:"}]
+
+    result = agent.action(system=system, prompt=prompt, use_model="claude-sonnet-4-5")
+
     # You can also access global state here to see all agent activities
     #print(f"Router agent executed. Total agent actions: {len(global_state.history)}")
     
@@ -40,11 +44,11 @@ if __name__ == "__main__":
     # Reset global state at the beginning (optional, good for testing)
     reset_global_agent_state()
 
-    gpt_model = create_model(model_type="openai",api_key = os.getenv('OPENAI_API_KEY'))
+    model = create_model(model_type="anthropic",api_key = os.getenv('ANTHROPIC_API_KEY'))
 
 
-    tool_agent = LLMAgent(name="tool_agent", llm_model= gpt_model, tools = [get_result_sum])
-    router_agent = LLMAgent(name="router_agent", llm_model= gpt_model)
+    tool_agent = LLMAgent(name="tool_agent", llm_model= model, tools = [get_result_sum])
+    router_agent = LLMAgent(name="router_agent", llm_model= model)
 
     supervisor_node = Node(node_name='supervisor',
                            kind='START',
