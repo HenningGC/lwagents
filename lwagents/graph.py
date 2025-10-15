@@ -64,7 +64,6 @@ class DirectTraversal:
     def __init__(self, target_node_name: str):
         self.target_node_name = target_node_name
 
-
 class GraphRequest(BaseModel):
     commands: Optional[List[SkipValidation[callable]]] = Field(
         None, description="The callback functions to execute"
