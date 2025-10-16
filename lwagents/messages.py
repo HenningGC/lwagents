@@ -49,7 +49,7 @@ class LLMResponse(BaseModel):
         if isinstance(self.response, GPTResponse):
             return self.response.content
         elif isinstance(self.response, AnthropicResponse):
-            return self.response.content[0].text if type(self.response.content[0]) != anthropic_types.ToolUseBlock else str(self.response.content)
+            return self.response.content[0].text
         else:
             return None
 

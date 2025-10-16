@@ -11,7 +11,7 @@ from typing_extensions import Self, override
 import json
 from .tools import ToolUtility
 
-from .messages import GPTResponse, AnthropicResponse, GPTResponse, GPTToolResponse, LLMResponse, LLMToolResponse
+from .messages import AnthropicToolResponse, GPTResponse, AnthropicResponse, GPTResponse, GPTToolResponse, LLMResponse, LLMToolResponse
 
 # -------------------------------
 # 1. The LLMModel interface
@@ -158,6 +158,7 @@ class AnthropicModel(BaseLLMModel):
                 max_tokens=kwargs.get("max_tokens", 200),
                 *args,
                 **kwargs)
+            return LLMToolResponse(results=AnthropicToolResponse(tool_response=message, content=""))
         else:
             message = self._model.messages.create(
                 model=model_name,
@@ -167,7 +168,7 @@ class AnthropicModel(BaseLLMModel):
                 *args,
                 **kwargs)
 
-        return LLMResponse(response=AnthropicResponse(response_message=message))
+            return LLMResponse(response=AnthropicResponse(response_message=message))
 
 
 # -------------------------------------------------
