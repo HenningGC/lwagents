@@ -8,7 +8,7 @@ def get_result_sum(val1: int,val2: int):
     return val1+val2
 
 def get_sum(agent):
-    result = agent.action(system = "You are an helpful assistant that uses his tools at their disposal", prompt= [{"role": "user", "content":"Use the get_result_sum tool to sum 300+140"}], use_model="gpt-5-mini" ,temperature=0.8)
+    result = agent.action(system = "You are an helpful assistant that uses his tools at their disposal", prompt= [{"role": "user", "content":"Use the get_result_sum tool to sum 300+140"}], use_model="gpt-5-mini")
     
     # Access the global agent state to see what agents have done
     global_state = get_global_agent_state()

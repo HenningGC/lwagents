@@ -11,7 +11,7 @@ from typing_extensions import Self, override
 import json
 from .tools import ToolUtility
 
-from .messages import GPTResponse, AnthropicResponse, GPTResponse, LLMResponse
+from .messages import GPTResponse, AnthropicResponse, GPTResponse, GPTToolResponse, LLMResponse, LLMToolResponse
 
 # -------------------------------
 # 1. The LLMModel interface
@@ -111,7 +111,7 @@ class GPTModel(BaseLLMModel):
             completion = self._model.responses.parse(
                 model=model_name, messages=prompt, text_format=structure, **kwargs
             )
-            return LLMResponse(response=GPTResponse(response_content=completion.choices[0].message))
+            return LLMResponse(response=GPTResponse(response_message=completion.choices[0].message))
         if tools:
             openai_tools = ToolUtility.get_tools_info_gpt(tools)
             completion = self._model.responses.create(
@@ -122,6 +122,8 @@ class GPTModel(BaseLLMModel):
                 tool_choice="required",
                 **kwargs,
             )
+            # Return the full completion object for tool execution
+            return LLMToolResponse(results=GPTToolResponse(tool_response=completion, content=completion.output_text))
 
         else:
             completion = self._model.responses.create(
@@ -132,7 +134,7 @@ class GPTModel(BaseLLMModel):
             )
 
 
-        return LLMResponse(response=GPTResponse(response_content=completion.choices[0].message))
+            return LLMResponse(response=GPTResponse(response_message=completion.output_text))
         # except Exception as e:
         #     return f"Error: {str(e)}"
 

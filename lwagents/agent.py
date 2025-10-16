@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel
 from typing_extensions import Self, override
 
-from .messages import LLMAgentRequest, LLMAgentResponse, LLMEntry
+from .messages import LLMAgentRequest, LLMAgentResponse, LLMEntry, LLMToolResponse
 from .state import AgentState, State, get_global_agent_state
 from .tools import Tool, ToolUtility, ToolsExecutionResults
 
@@ -65,7 +65,7 @@ class LLMAgent(Agent):
             model_name=use_model, prompt=prompt, tools=self.tools, system=system, *args, **kwargs
         )
         result = None
-        if self.tools:
+        if type(response) == LLMToolResponse:
             tool_execution_results = ToolUtility.execute_from_response(
                 tool_response=response, tools=self.tools
             )
@@ -86,7 +86,7 @@ class LLMAgent(Agent):
                 )
             else:
                 result = LLMAgentResponse(
-                    role="assistant", content=response.content, tool_used=None
+                    role="assistant", content=None, tool_used=None
                 )
         else:
             result = LLMAgentResponse(
