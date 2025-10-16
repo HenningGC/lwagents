@@ -173,7 +173,7 @@ class ToolUtility:
         if type(tool_response.results) == GPTToolResponse:
             return cls.execute_gpt_tools_from_response(response=tool_response.results, tools=tools)
         elif type(tool_response.results) == AnthropicToolResponse:
-            return cls.execute_anthropic_tools_from_response(response=tool_response.response.response_message, tools=tools)
+            return cls.execute_anthropic_tools_from_response(response=tool_response.results, tools=tools)
         else:
             raise ValueError("Unsupported response type")
 
@@ -241,7 +241,7 @@ class ToolUtility:
     @classmethod
     def execute_anthropic_tools_from_response(cls, response: Any, tools: dict) -> Any:
         tool_results = []
-        if response.stop_reason == "tool_use":
+        if response.tool_response.stop_reason == "tool_use":
             for c in response.content:
                 if c.type == "tool_use":
                     tool_name = c.name
