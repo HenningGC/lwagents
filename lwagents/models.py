@@ -11,7 +11,15 @@ from typing_extensions import Self, override
 import json
 from .tools import ToolUtility
 
-from .messages import AnthropicToolResponse, GPTResponse, AnthropicResponse, GPTResponse, GPTToolResponse, LLMResponse, LLMToolResponse
+from .messages import (
+    AnthropicToolResponse,
+    GPTResponse,
+    AnthropicResponse,
+    GPTResponse,
+    GPTToolResponse,
+    LLMResponse,
+    LLMToolResponse,
+)
 
 # -------------------------------
 # 1. The LLMModel interface
@@ -53,6 +61,7 @@ class BaseLLMModel(LLMModel):
         """
         pass
 
+
 # ------------------------------------
 # 4. Concrete model loader classes
 # ------------------------------------
@@ -61,15 +70,16 @@ class BaseLLMModel(LLMModel):
 class ModelLoader:
 
     @staticmethod
-    def load_model(model_type: str, api_key: str,*args, **kwargs) -> OpenAI:
-        
+    def load_model(model_type: str, api_key: str, *args, **kwargs) -> OpenAI:
+
         if model_type == "openai":
             return OpenAI(api_key=api_key, *args, **kwargs)
         elif model_type == "deepseek":
-            return OpenAI(api_key=api_key, base_url="https://api.deepseek.com", *args, **kwargs)
+            return OpenAI(
+                api_key=api_key, base_url="https://api.deepseek.com", *args, **kwargs
+            )
         elif model_type == "anthropic":
             return anthropic.Anthropic(api_key=api_key, *args, **kwargs)
-
 
 
 # ----------------------------------
@@ -105,13 +115,14 @@ class GPTModel(BaseLLMModel):
             raise Warning(
                 "Tool calling with structured output is currently incompatible!"
             )
-        
 
         if structure:
             completion = self._model.responses.parse(
                 model=model_name, messages=prompt, text_format=structure, **kwargs
             )
-            return LLMResponse(response=GPTResponse(response_message=completion.choices[0].message))
+            return LLMResponse(
+                response=GPTResponse(response_message=completion.choices[0].message)
+            )
         if tools:
             openai_tools = ToolUtility.get_tools_info_gpt(tools)
             completion = self._model.responses.create(
@@ -123,7 +134,11 @@ class GPTModel(BaseLLMModel):
                 **kwargs,
             )
             # Return the full completion object for tool execution
-            return LLMToolResponse(results=GPTToolResponse(tool_response=completion, content=completion.output_text))
+            return LLMToolResponse(
+                results=GPTToolResponse(
+                    tool_response=completion, content=completion.output_text
+                )
+            )
 
         else:
             completion = self._model.responses.create(
@@ -133,17 +148,28 @@ class GPTModel(BaseLLMModel):
                 **kwargs,
             )
 
-
-            return LLMResponse(response=GPTResponse(response_message=completion.output_text))
+            return LLMResponse(
+                response=GPTResponse(response_message=completion.output_text)
+            )
         # except Exception as e:
         #     return f"Error: {str(e)}"
+
 
 class DeepSeekModel(GPTModel):
     pass
 
+
 class AnthropicModel(BaseLLMModel):
     @override
-    def generate(self, model_name: str,  prompt: List[Dict[str, str]] | None = None, tools: Dict[str, callable] | None = None, system: str = None, *args, **kwargs):
+    def generate(
+        self,
+        model_name: str,
+        prompt: List[Dict[str, str]] | None = None,
+        tools: Dict[str, callable] | None = None,
+        system: str = None,
+        *args,
+        **kwargs,
+    ):
 
         if kwargs.get("structure"):
             raise Warning("Structured output is currently incompatible with Anthropic!")
@@ -157,8 +183,11 @@ class AnthropicModel(BaseLLMModel):
                 tools=anthropic_tools,
                 max_tokens=kwargs.get("max_tokens", 200),
                 *args,
-                **kwargs)
-            return LLMToolResponse(results=AnthropicToolResponse(tool_response=message, content=""))
+                **kwargs,
+            )
+            return LLMToolResponse(
+                results=AnthropicToolResponse(tool_response=message, content="")
+            )
         else:
             message = self._model.messages.create(
                 model=model_name,
@@ -166,7 +195,8 @@ class AnthropicModel(BaseLLMModel):
                 messages=prompt,
                 max_tokens=kwargs.get("max_tokens", 200),
                 *args,
-                **kwargs)
+                **kwargs,
+            )
 
             return LLMResponse(response=AnthropicResponse(response_message=message))
 
