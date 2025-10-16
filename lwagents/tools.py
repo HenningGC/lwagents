@@ -6,18 +6,27 @@ import json
 from pydantic import BaseModel, Field
 import openai
 
-from lwagents.messages import AnthropicResponse, AnthropicToolResponse, GPTResponse, GPTToolResponse
+from lwagents.messages import (
+    AnthropicResponse,
+    AnthropicToolResponse,
+    GPTResponse,
+    GPTToolResponse,
+)
+
 
 class ToolExecutionError(Exception):
     pass
+
 
 class ToolExecutionResult(BaseModel):
     id: str
     name: str
     content: Any
 
+
 class ToolsExecutionResults(BaseModel):
     results: List[ToolExecutionResult]
+
 
 class BaseTool(ABC):
     @abstractmethod
@@ -96,20 +105,22 @@ class ToolUtility:
             func = tools[tool]
             tool_schema = func.schema
             model_tool = openai.pydantic_function_tool(tool_schema)
-            
+
             # Extract the function definition from the pydantic tool format
             function_def = model_tool["function"]
-            
+
             # Transform properties to remove 'title' and 'additionalProperties'
             simplified_properties = {}
-            for param_name, param_schema in function_def["parameters"]["properties"].items():
-                simplified_properties[param_name] = {
-                    "type": param_schema["type"]
-                }
+            for param_name, param_schema in function_def["parameters"][
+                "properties"
+            ].items():
+                simplified_properties[param_name] = {"type": param_schema["type"]}
                 # Add description if available (using title as description if present)
                 if "title" in param_schema and param_schema["title"] != param_name:
-                    simplified_properties[param_name]["description"] = param_schema["title"]
-            
+                    simplified_properties[param_name]["description"] = param_schema[
+                        "title"
+                    ]
+
             # Create simplified tool format
             simplified_tool = {
                 "type": "function",
@@ -118,12 +129,13 @@ class ToolUtility:
                 "parameters": {
                     "type": "object",
                     "properties": simplified_properties,
-                    "required": function_def["parameters"].get("required", [])
-                }
+                    "required": function_def["parameters"].get("required", []),
+                },
             }
-            
+
             model_tools.append(simplified_tool)
         return model_tools
+
     @staticmethod
     def get_tools_info_anthropic(tools: Dict[str, callable]) -> List[BaseModel]:
         """
@@ -143,7 +155,7 @@ class ToolUtility:
 
             model_tool_function = model_tool["function"]
             model_tool_function_params = model_tool_function["parameters"]["properties"]
-            
+
             # Transform properties to remove 'title' and keep only type and description
             anthropic_properties = {}
             for param_name, param_schema in model_tool_function_params.items():
@@ -152,28 +164,35 @@ class ToolUtility:
                 }
                 # Add description if it exists (title can serve as description)
                 if "title" in param_schema:
-                    anthropic_properties[param_name]["description"] = param_schema["title"]
-            
+                    anthropic_properties[param_name]["description"] = param_schema[
+                        "title"
+                    ]
+
             anthropic_tool = {
                 "name": model_tool_function["name"],
-                "description": model_tool_function.get("description", model_tool_function["name"]),
+                "description": model_tool_function.get(
+                    "description", model_tool_function["name"]
+                ),
                 "input_schema": {
                     "type": model_tool_function["parameters"]["type"],
                     "properties": anthropic_properties,
-                    "required": model_tool_function["parameters"].get("required", [])
-                }
+                    "required": model_tool_function["parameters"].get("required", []),
+                },
             }
-
 
             model_tools.append(anthropic_tool)
         return model_tools
-    
+
     @classmethod
     def execute_from_response(cls, tool_response: Any, tools: dict) -> Any:
         if type(tool_response.results) == GPTToolResponse:
-            return cls.execute_gpt_tools_from_response(response=tool_response.results, tools=tools)
+            return cls.execute_gpt_tools_from_response(
+                response=tool_response.results, tools=tools
+            )
         elif type(tool_response.results) == AnthropicToolResponse:
-            return cls.execute_anthropic_tools_from_response(response=tool_response.results, tools=tools)
+            return cls.execute_anthropic_tools_from_response(
+                response=tool_response.results, tools=tools
+            )
         else:
             raise ValueError("Unsupported response type")
 
@@ -181,35 +200,37 @@ class ToolUtility:
     def execute_gpt_tools_from_response(cls, response: Any, tools: dict) -> Any:
         """
         Execute tools from OpenAI Responses API format.
-        
+
         Args:
             response: LLMResponse object containing the OpenAI response
             tools: Dictionary of tool names to tool instances
-            
+
         Returns:
             ToolsExecutionResults with executed tool results or None
         """
         tool_results = []
-        
+
         # Handle new OpenAI Responses API format (response.output)
-        if hasattr(response, 'tool_response'):
+        if hasattr(response, "tool_response"):
             # This is an LLMResponse wrapping a GPTResponse
             # We need to check if it's a string (text response) or has output items
             response_content = response.tool_response
             # Check if it's an OpenAI Response object with output
-            if hasattr(response_content, 'output'):
+            if hasattr(response_content, "output"):
                 for item in response_content.output:
-                    if hasattr(item, 'type') and item.type == "function_call":
+                    if hasattr(item, "type") and item.type == "function_call":
                         tool_call = item
                         tool_name = tool_call.name
                         tool_args = json.loads(tool_call.arguments)
-                        
+
                         if tool_name in tools:
                             if tool_args:
-                                function_response = tools[tool_name].execute(**tool_args)
+                                function_response = tools[tool_name].execute(
+                                    **tool_args
+                                )
                             else:
                                 function_response = tools[tool_name].execute()
-                            
+
                             tool_result = ToolExecutionResult(
                                 id=tool_call.id,
                                 name=tool_name,
@@ -218,9 +239,13 @@ class ToolUtility:
                             tool_results.append(tool_result)
                         else:
                             raise ToolExecutionError(f"Tool {tool_name} not found!")
-                
-                return ToolsExecutionResults(results=tool_results) if tool_results else None
-        
+
+                return (
+                    ToolsExecutionResults(results=tool_results)
+                    if tool_results
+                    else None
+                )
+
         # Handle legacy format (response.tool_calls) for backwards compatibility
         # if hasattr(response, 'tool_calls') and response.tool_calls:
         #     for tool_call in response.tool_calls:
@@ -234,9 +259,8 @@ class ToolUtility:
         #         else:
         #             raise ToolExecutionError(f"Tool {tool_name} not found!")
         #     return ToolsExecutionResults(results=tool_results)
-        
+
         # return None
-        
 
     @classmethod
     def execute_anthropic_tools_from_response(cls, response: Any, tools: dict) -> Any:
@@ -245,7 +269,7 @@ class ToolUtility:
             for c in response.content:
                 if c.type == "tool_use":
                     tool_name = c.name
-                    tool_args =c.input
+                    tool_args = c.input
 
                     if tool_name in tools:
                         if tool_args:

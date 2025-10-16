@@ -10,7 +10,6 @@ from .state import AgentState, State, get_global_agent_state
 from .tools import Tool, ToolUtility, ToolsExecutionResults
 
 
-
 class InvalidAgent(Exception):
     pass
 
@@ -48,21 +47,36 @@ class LLMAgent(Agent):
         llm_model,
         tools: List = None,
         model_name: str = None,
-        state: Optional[AgentState] = AgentState()
-        ):
+        state: Optional[AgentState] = AgentState(),
+    ):
         super().__init__(name=name, tools=tools, state=state)
         self.llm_model = llm_model
         self.model_name = model_name
 
     @override
-    def action(self, prompt: List[Dict[str, str]], state_entry: Optional[dict] = {}, use_model: str = None, system: str = None, *args, **kwargs):
+    def action(
+        self,
+        prompt: List[Dict[str, str]],
+        state_entry: Optional[dict] = {},
+        use_model: str = None,
+        system: str = None,
+        *args,
+        **kwargs,
+    ):
         request = LLMAgentRequest(content=prompt)
         if not use_model:
             use_model = self.model_name
         if not use_model:
-            raise ValueError("Model name must be specified either in agent or action call!")
+            raise ValueError(
+                "Model name must be specified either in agent or action call!"
+            )
         response = self.llm_model.generate(
-            model_name=use_model, prompt=prompt, tools=self.tools, system=system, *args, **kwargs
+            model_name=use_model,
+            prompt=prompt,
+            tools=self.tools,
+            system=system,
+            *args,
+            **kwargs,
         )
         result = None
         if type(response) == LLMToolResponse:
@@ -75,7 +89,7 @@ class LLMAgent(Agent):
                     tool_response_content = {
                         "tool_call_id": tool_execution_result.id,
                         "name": tool_execution_result.name,
-                        "content": tool_execution_result.content
+                        "content": tool_execution_result.content,
                     }
                     tool_results.append(tool_response_content)
 
