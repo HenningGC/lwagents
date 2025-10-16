@@ -86,7 +86,7 @@ class LLMAgent(Agent):
                 )
             else:
                 result = LLMAgentResponse(
-                    role="assistant", content=response.content, tool_used=None
+                    role="assistant", content=None, tool_used=None
                 )
         else:
             result = LLMAgentResponse(

@@ -28,6 +28,7 @@ class GPTResponse(BaseModel):
     
 class GPTToolResponse(BaseModel):
     tool_response: Any
+    content: str
 
 
 class AnthropicResponse(BaseModel):
@@ -37,7 +38,8 @@ class AnthropicResponse(BaseModel):
         return self.response_message.content
     
 class AnthropicToolResponse(BaseModel):
-    tool_response: anthropic_types.ToolUseBlock
+    tool_response: Any
+    content: str
 
 class LLMResponse(BaseModel):
     # when accessed determine if GPT or Anthropic response and then return content accordingly
@@ -53,3 +55,11 @@ class LLMResponse(BaseModel):
 
 class LLMToolResponse(BaseModel):
     results: GPTToolResponse | AnthropicToolResponse
+    @property
+    def content(self):
+        if isinstance(self.results, GPTToolResponse):
+            return self.results.content
+        elif isinstance(self.results, AnthropicToolResponse):
+            return self.results.content
+        else:
+            return None

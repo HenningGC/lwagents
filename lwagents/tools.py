@@ -171,7 +171,7 @@ class ToolUtility:
     @classmethod
     def execute_from_response(cls, tool_response: Any, tools: dict) -> Any:
         if type(tool_response.results) == GPTToolResponse:
-            return cls.execute_gpt_tools_from_response(response=tool_response, tools=tools)
+            return cls.execute_gpt_tools_from_response(response=tool_response.results, tools=tools)
         elif type(tool_response.results) == AnthropicToolResponse:
             return cls.execute_anthropic_tools_from_response(response=tool_response.response.response_message, tools=tools)
         else:
@@ -192,22 +192,17 @@ class ToolUtility:
         tool_results = []
         
         # Handle new OpenAI Responses API format (response.output)
-        if hasattr(response, 'response') and hasattr(response.response, 'response_message'):
+        if hasattr(response, 'tool_response'):
             # This is an LLMResponse wrapping a GPTResponse
             # We need to check if it's a string (text response) or has output items
-            response_content = response.response.response_message
-            
-            # If it's a string, no tools were called
-            if isinstance(response_content, str):
-                return None
-                
+            response_content = response.tool_response
             # Check if it's an OpenAI Response object with output
             if hasattr(response_content, 'output'):
                 for item in response_content.output:
-                    if hasattr(item, 'type') and item.type == "tool_call":
+                    if hasattr(item, 'type') and item.type == "function_call":
                         tool_call = item
                         tool_name = tool_call.name
-                        tool_args = tool_call.arguments
+                        tool_args = json.loads(tool_call.arguments)
                         
                         if tool_name in tools:
                             if tool_args:
@@ -227,20 +222,20 @@ class ToolUtility:
                 return ToolsExecutionResults(results=tool_results) if tool_results else None
         
         # Handle legacy format (response.tool_calls) for backwards compatibility
-        if hasattr(response, 'tool_calls') and response.tool_calls:
-            for tool_call in response.tool_calls:
-                tool_name = tool_call.function.name
-                tool_args = json.loads(tool_call.function.arguments)
-                if tool_name in tools:
-                    if tool_args:
-                        tool_results.append(tools[tool_name].execute(**tool_args))
-                    else:
-                        tool_results.append(tools[tool_name].execute())
-                else:
-                    raise ToolExecutionError(f"Tool {tool_name} not found!")
-            return ToolsExecutionResults(results=tool_results)
+        # if hasattr(response, 'tool_calls') and response.tool_calls:
+        #     for tool_call in response.tool_calls:
+        #         tool_name = tool_call.function.name
+        #         tool_args = json.loads(tool_call.function.arguments)
+        #         if tool_name in tools:
+        #             if tool_args:
+        #                 tool_results.append(tools[tool_name].execute(**tool_args))
+        #             else:
+        #                 tool_results.append(tools[tool_name].execute())
+        #         else:
+        #             raise ToolExecutionError(f"Tool {tool_name} not found!")
+        #     return ToolsExecutionResults(results=tool_results)
         
-        return None
+        # return None
         
 
     @classmethod

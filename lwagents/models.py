@@ -114,7 +114,6 @@ class GPTModel(BaseLLMModel):
             return LLMResponse(response=GPTResponse(response_message=completion.choices[0].message))
         if tools:
             openai_tools = ToolUtility.get_tools_info_gpt(tools)
-            print(openai_tools)
             completion = self._model.responses.create(
                 model=model_name,
                 instructions=system,
@@ -124,7 +123,7 @@ class GPTModel(BaseLLMModel):
                 **kwargs,
             )
             # Return the full completion object for tool execution
-            return LLMToolResponse(results=GPTToolResponse(tool_response=completion))
+            return LLMToolResponse(results=GPTToolResponse(tool_response=completion, content=completion.output_text))
 
         else:
             completion = self._model.responses.create(
