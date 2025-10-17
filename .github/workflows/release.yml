@@ -81,28 +81,3 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
       run: |
         python -m twine upload dist/*
-    
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ steps.get_version.outputs.TAG_NAME }}
-        name: Release ${{ steps.get_version.outputs.TAG_NAME }}
-        body: |
-          ## Changes in this Release
-          
-          - Automated release for version ${{ steps.get_version.outputs.VERSION }}
-          - Package published to PyPI: https://pypi.org/project/lwagents/${{ steps.get_version.outputs.VERSION }}/
-          
-          ## Installation
-          
-          ```bash
-          pip install lwagents==${{ steps.get_version.outputs.VERSION }}
-          ```
-          
-          See the [repository](https://github.com/HenningGC/lwagents) for detailed documentation and examples.
-        files: |
-          dist/*
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
