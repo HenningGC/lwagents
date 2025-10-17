@@ -1,6 +1,9 @@
 <div align="center">
   <img src="https://github.com/user-attachments/assets/939a7ad6-f572-4abf-a3db-12030d670ef0" alt="LWAgents Logo" width="400">
 </div>
+<div align="center">
+  <p>By <b>RapidEpoch</b>, <a href="https://rapidepoch.com/">Learn More Here</a>
+</div>
 
 # LWAgents: A Library for Graph-Driven AI Agents with Tool Integration
 
@@ -104,7 +107,7 @@ Integrate AI agents (like OpenAI's GPT) to dynamically route or execute tasks:
 from lwagents import LLMAgent, create_model
 
 # Initialize an LLM model
-llm_model = create_model("gpt", api_key="your_openai_api_key")
+llm_model = create_model("openai", api_key="your_openai_api_key")
 agent = LLMAgent(name="my_agent", llm_model=llm_model)
 
 # Use the agent in a node
@@ -155,19 +158,9 @@ from lwagents import GraphRequest
 
 def intelligent_router(agent):
     global_state = get_global_agent_state()
-    prompt = [
-        {
-            "role": "system", 
-            "content": "You are an agent router. Decide which node to visit next based on the task and results so far. Return only the node name."
-        },
-        {
-            "role": "user", 
-            "content": f"Available nodes: get_division, search_internet, get_sum, end. "
-                      f"Objective: get sum, then divide and search on the internet. "
-                      f"Results so far: {global_state.history}"
-        }
-    ]
-    result = agent.action(prompt=prompt)
+
+    system_prompt = "You are an helpful assistant that uses his tools at their disposal"
+    agent.action(system = system_prompt, prompt= [{"role": "user", "content":"Use the get_result_sum tool to sum 300+140"}], use_model="gpt-5-mini")
     
     return GraphRequest(result=result.content, traversal=result.content)
 ```
