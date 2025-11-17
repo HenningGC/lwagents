@@ -1,6 +1,6 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 from typing_extensions import Self, override
@@ -60,8 +60,7 @@ class LLMAgent(Agent):
         state_entry: Optional[dict] = {},
         use_model: str = None,
         system: str = None,
-        *args,
-        **kwargs,
+        model_params: Dict[str, Any] = {},
     ):
         request = LLMAgentRequest(content=prompt)
         if not use_model:
@@ -75,8 +74,7 @@ class LLMAgent(Agent):
             prompt=prompt,
             tools=self.tools,
             system=system,
-            *args,
-            **kwargs,
+            model_params=model_params,
         )
         result = None
         if type(response) == LLMToolResponse:
