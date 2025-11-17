@@ -107,15 +107,23 @@ Integrate AI agents (like OpenAI's GPT) to dynamically route or execute tasks:
 from lwagents import LLMAgent, create_model
 
 # Initialize an LLM model
-llm_model = create_model("openai", api_key="your_openai_api_key")
+llm_model = create_model("openai", instance_params={"api_key": "your_openai_api_key"})
 agent = LLMAgent(name="my_agent", llm_model=llm_model)
 
-# Use the agent in a node
+# Use the agent in a node with model_params
+def decision_task(agent):
+    model_params = {
+        "model": "gpt-4o-mini",
+        "instructions": "You are a helpful decision-making assistant",
+        "input": [{"role": "user", "content": "Which task should I perform next?"}]
+    }
+    return agent.action(model_params=model_params)
+
 decision_node = Node(
     node_name="decision",
     kind="STATE",
-    command=lambda prompt: agent.action(prompt=prompt),
-    parameters={"prompt": [{"role": "user", "content": "Which task should I perform next?"}]}
+    command=decision_task,
+    parameters={"agent": agent}
 )
 ```
 
@@ -150,17 +158,46 @@ def calculate_sum(a: int, b: int) -> int:
 agent = LLMAgent(name="tool_agent", llm_model=llm_model, tools=[calculate_sum])
 ```
 
+### Custom Model Integration
+Integrate custom models (e.g., HuggingFace) by extending `BaseLLMModel`:
+
+```python
+from lwagents.models import BaseLLMModel, create_model
+from lwagents.messages import LLMResponse, GPTResponse
+from transformers import pipeline
+
+class HuggingFaceModel(BaseLLMModel):
+    def generate(self, prompt):
+        result = self._model(prompt)
+        return LLMResponse(response=result)
+
+# Initialize and use
+hf_pipeline = pipeline("text-generation", model="gpt2")
+custom_model = create_model(
+    model_type="custom",
+    instance_params={},
+    custom_model=HuggingFaceModel,
+    custom_implementation=hf_pipeline
+)
+agent = LLMAgent(name="hf_agent", llm_model=custom_model)
+```
+
 ### Dynamic Node Routing
 Define router nodes that use global agent state to make intelligent routing decisions:
 
 ```python
 from lwagents import GraphRequest
+from lwagents.state import get_global_agent_state
 
 def intelligent_router(agent):
     global_state = get_global_agent_state()
-
-    system_prompt = "You are an helpful assistant that uses his tools at their disposal"
-    agent.action(system = system_prompt, prompt= [{"role": "user", "content":"Use the get_result_sum tool to sum 300+140"}], use_model="gpt-5-mini")
+    
+    model_params = {
+        "model": "gpt-4o-mini",
+        "instructions": "You are a helpful assistant that uses the tools at your disposal",
+        "input": [{"role": "user", "content": "Use the get_result_sum tool to sum 300+140"}]
+    }
+    result = agent.action(model_params=model_params)
     
     return GraphRequest(result=result.content, traversal=result.content)
 ```

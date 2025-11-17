@@ -266,7 +266,7 @@ class ToolUtility:
     def execute_anthropic_tools_from_response(cls, response: Any, tools: dict) -> Any:
         tool_results = []
         if response.tool_response.stop_reason == "tool_use":
-            for c in response.content:
+            for c in response.tool_response.content:
                 if c.type == "tool_use":
                     tool_name = c.name
                     tool_args = c.input

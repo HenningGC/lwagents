@@ -177,7 +177,7 @@ class GlobalAgentState(State):
         self,
         agent_name,
         agent_kind,
-        entry,
+        action_result,
         enforce_schema: Optional[bool] = False,
         **kwargs,
     ) -> None:
@@ -187,7 +187,7 @@ class GlobalAgentState(State):
         state_entry = {
             "agent_name": agent_name,
             "agent_kind": agent_kind,
-            "entry": entry,
+            "action_result": action_result,
             **kwargs,
         }
         if enforce_schema:

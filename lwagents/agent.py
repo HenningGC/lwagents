@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 from typing_extensions import Self, override
 
-from .messages import LLMAgentRequest, LLMAgentResponse, LLMEntry, LLMToolResponse
+from .messages import LLMAgentResponse, LLMToolResponse
 from .state import AgentState, State, get_global_agent_state
 from .tools import Tool, ToolUtility, ToolsExecutionResults
 
@@ -32,11 +32,11 @@ class Agent(ABC):
             return self.tools[tool_name].execute(*args, **kwargs)
         raise ValueError(f"Tool {tool_name} not found!")
 
-    def update_global_state(self, name, entry, **kwargs):
+    def update_global_state(self, name, action_result, **kwargs):
         """Update the global agent state with information about this agent's action."""
         global_state = get_global_agent_state()
         global_state.update_state(
-            agent_name=name, agent_kind=type(self).__name__, entry=entry, **kwargs
+            agent_name=name, agent_kind=type(self).__name__, action_result=action_result, **kwargs
         )
 
 
@@ -45,35 +45,20 @@ class LLMAgent(Agent):
         self,
         name: str,
         llm_model,
-        tools: List = None,
-        model_name: str = None,
+        tools: list[Tool] = [],
         state: Optional[AgentState] = AgentState(),
     ):
         super().__init__(name=name, tools=tools, state=state)
         self.llm_model = llm_model
-        self.model_name = model_name
 
     @override
     def action(
         self,
-        prompt: List[Dict[str, str]],
         state_entry: Optional[dict] = {},
-        use_model: str = None,
-        system: str = None,
         model_params: Dict[str, Any] = {},
     ):
-        request = LLMAgentRequest(content=prompt)
-        if not use_model:
-            use_model = self.model_name
-        if not use_model:
-            raise ValueError(
-                "Model name must be specified either in agent or action call!"
-            )
         response = self.llm_model.generate(
-            model_name=use_model,
-            prompt=prompt,
-            tools=self.tools,
-            system=system,
+            tools = self.tools,
             model_params=model_params,
         )
         result = None
@@ -93,23 +78,21 @@ class LLMAgent(Agent):
 
                 result = LLMAgentResponse(
                     role="tool",
-                    content=response.content,
+                    content=str([tr["content"] for tr in tool_results]),
                     tools_used=[tr["name"] for tr in tool_results],
                 )
             else:
                 result = LLMAgentResponse(
-                    role="assistant", content=None, tool_used=None
+                    role="assistant", content=None, tools_used=None
                 )
         else:
             result = LLMAgentResponse(
-                role="assistant", content=response.content, tool_used=None
+                role="assistant", content=response.content, tools_used=None
             )
 
-        entry = LLMEntry(AgentRequest=request, AgentResponse=result)
-
         # Update both local and global state
-        self.update_state(request=request, response=result, **state_entry)
-        self.update_global_state(name=self.name, entry=entry)
+        self.update_state(response=result, **state_entry)
+        self.update_global_state(name=self.name, action_result=result.content)
 
         return result
 
