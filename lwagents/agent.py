@@ -36,7 +36,10 @@ class Agent(ABC):
         """Update the global agent state with information about this agent's action."""
         global_state = get_global_agent_state()
         global_state.update_state(
-            agent_name=name, agent_kind=type(self).__name__, action_result=action_result, **kwargs
+            agent_name=name,
+            agent_kind=type(self).__name__,
+            action_result=action_result,
+            **kwargs,
         )
 
 
@@ -58,7 +61,7 @@ class LLMAgent(Agent):
         model_params: Dict[str, Any] = {},
     ):
         response = self.llm_model.generate(
-            tools = self.tools,
+            tools=self.tools,
             model_params=model_params,
         )
         result = None

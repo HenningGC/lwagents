@@ -25,6 +25,7 @@ from .messages import (
 class CustomModelError(Exception):
     pass
 
+
 # -------------------------------
 # 1. The LLMModel interface
 # -------------------------------
@@ -74,7 +75,9 @@ class BaseLLMModel(LLMModel):
 class ModelLoader:
 
     @staticmethod
-    def load_model(model_type: str, instance_params: dict, custom_implementation: Any) -> OpenAI:
+    def load_model(
+        model_type: str, instance_params: dict, custom_implementation: Any
+    ) -> OpenAI:
 
         if model_type == "openai":
             return OpenAI(**instance_params)
@@ -84,7 +87,6 @@ class ModelLoader:
             return anthropic.Anthropic(**instance_params)
         elif model_type == "custom":
             return custom_implementation(**instance_params)
-            
 
 
 # ----------------------------------
@@ -118,7 +120,10 @@ class GPTModel(BaseLLMModel):
 
         if model_params.get("structure"):
             completion = self._model.responses.parse(
-                model=model_params.get("model"), messages=model_params.get("prompt"), text_format=model_params.get("structure"), **model_params
+                model=model_params.get("model"),
+                messages=model_params.get("prompt"),
+                text_format=model_params.get("structure"),
+                **model_params,
             )
             return LLMResponse(
                 response=GPTResponse(response_message=completion.choices[0].message)
@@ -126,7 +131,7 @@ class GPTModel(BaseLLMModel):
         if tools:
             openai_tools = ToolUtility.get_tools_info_gpt(tools)
             completion = self._model.responses.create(
-                tools =openai_tools,
+                tools=openai_tools,
                 **model_params,
             )
             # Return the full completion object for tool execution
@@ -144,7 +149,6 @@ class GPTModel(BaseLLMModel):
             return LLMResponse(
                 response=GPTResponse(response_message=completion.output_text)
             )
-
 
 
 class DeepSeekModel(GPTModel):
@@ -184,14 +188,14 @@ class AnthropicModel(BaseLLMModel):
 
 
 def create_model(model_type: str, *args, **kwargs) -> LLMModel:
-    
+
     custom_model = kwargs.get("custom_model")
     custom_implementation = kwargs.get("custom_implementation")
     loader = ModelLoader.load_model(
-        model_type=model_type, 
+        model_type=model_type,
         custom_implementation=custom_implementation,
-        *args, 
-        **kwargs
+        *args,
+        **kwargs,
     )
 
     if model_type == "openai":
@@ -202,5 +206,7 @@ def create_model(model_type: str, *args, **kwargs) -> LLMModel:
         return AnthropicModel(loader)
     elif model_type == "custom":
         if custom_model is None or not custom_implementation:
-            raise CustomModelError("custom_model and custom_implementation must be provided for custom model type")
+            raise CustomModelError(
+                "custom_model and custom_implementation must be provided for custom model type"
+            )
         return custom_model(loader)
