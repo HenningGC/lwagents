@@ -182,7 +182,6 @@ class AnthropicModel(BaseLLMModel):
 
             return LLMResponse(response=AnthropicResponse(response_message=message))
 
-
 # -------------------------------------------------
 # 6. LLMFactory to create model instances on demand
 # -------------------------------------------------
