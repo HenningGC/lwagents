@@ -8,7 +8,12 @@ def get_result_sum(val1: int,val2: int):
     return val1+val2
 
 def get_sum(agent):
-    result = agent.action(system = "You are an helpful assistant that uses his tools at their disposal", prompt= [{"role": "user", "content":"Use the get_result_sum tool to sum 300+140"}], use_model="gpt-5-mini")
+    model_params = {
+        "instructions": "You are an helpful assistant that uses his tools at their disposal",
+        "input": [{"role": "user", "content": "Use the get_result_sum tool to sum 300+140"}],
+        "model": "gpt-4o-mini",
+    }
+    result = agent.action(model_params=model_params)
     
     # Access the global agent state to see what agents have done
     global_state = get_global_agent_state()
@@ -25,9 +30,14 @@ def search_internet():
 
 def test_router(agent):
     global_state = get_global_agent_state()
-    prompt =[{"role": "system", "content": "You are an agent router and you decide which node to travel to next based on the task and results thus far. Your next answer must only return the node name."},
-     {"role": "user", "content": f"You have the following nodes at your disposal: get_division, search_internet, get_sum, end. You have to decide the sequence of nodes to travel to based on based on this objective: get sum, then divide and search on the internet. These are the results thus far: {global_state.history}"}]
-    result = agent.action(prompt = prompt, use_model="gpt-4o-mini")
+    model_params = {
+        "instructions": "You are an agent router and you decide which node to travel to next based on the task and results thus far. Your next answer must only return the node name.",
+        "input": [
+            {"role": "user", "content": f"You have the following nodes at your disposal: get_division, search_internet, get_sum, end. You have to decide the sequence of nodes to travel to based on based on this objective: get sum, then divide and search on the internet. These are the results thus far: {global_state.history}"}
+        ],
+        "model": "gpt-4o-mini"
+    }
+    result = agent.action(model_params=model_params)
     
     # You can also access global state here to see all agent activities
     #print(f"Router agent executed. Total agent actions: {len(global_state.history)}")
@@ -40,7 +50,7 @@ if __name__ == "__main__":
     # Reset global state at the beginning (optional, good for testing)
     reset_global_agent_state()
 
-    gpt_model = create_model(model_type="openai",api_key = os.getenv('OPENAI_API_KEY'))
+    gpt_model = create_model(model_type="openai", instance_params={"api_key": os.getenv('OPENAI_API_KEY')})
 
 
     tool_agent = LLMAgent(name="tool_agent", llm_model= gpt_model, tools = [get_result_sum])

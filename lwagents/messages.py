@@ -11,15 +11,6 @@ class LLMAgentResponse(BaseModel):
     tools_used: Optional[List[str]] = None  # Optional: Tool used during execution
 
 
-class LLMAgentRequest(BaseModel):
-    content: List[Dict[str, str]]
-
-
-class LLMEntry(BaseModel):
-    AgentRequest: LLMAgentRequest
-    AgentResponse: LLMAgentResponse
-
-
 class GPTResponse(BaseModel):
     response_message: str
 

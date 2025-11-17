@@ -21,6 +21,10 @@ from .messages import (
     LLMToolResponse,
 )
 
+
+class CustomModelError(Exception):
+    pass
+
 # -------------------------------
 # 1. The LLMModel interface
 # -------------------------------
@@ -55,7 +59,7 @@ class BaseLLMModel(LLMModel):
         self._model = model
 
     @abstractmethod
-    def generate(self, prompt: str, max_tokens: int = 50) -> str:
+    def generate(self) -> str:
         """
         Concrete subclasses must implement their own generate method,
         """
@@ -70,16 +74,17 @@ class BaseLLMModel(LLMModel):
 class ModelLoader:
 
     @staticmethod
-    def load_model(model_type: str, api_key: str, *args, **kwargs) -> OpenAI:
+    def load_model(model_type: str, instance_params: dict, custom_implementation: Any) -> OpenAI:
 
         if model_type == "openai":
-            return OpenAI(api_key=api_key, *args, **kwargs)
+            return OpenAI(**instance_params)
         elif model_type == "deepseek":
-            return OpenAI(
-                api_key=api_key, base_url="https://api.deepseek.com", *args, **kwargs
-            )
+            return OpenAI(**instance_params, base_url="https://api.deepseek.ai/v1")
         elif model_type == "anthropic":
-            return anthropic.Anthropic(api_key=api_key, *args, **kwargs)
+            return anthropic.Anthropic(**instance_params)
+        elif model_type == "custom":
+            return custom_implementation(**instance_params)
+            
 
 
 # ----------------------------------
@@ -91,13 +96,8 @@ class GPTModel(BaseLLMModel):
     @override
     def generate(
         self,
-        model_name: str,
-        prompt: List[Dict[str, str]] | None = None,
-        structure: BaseModel | None = None,
         tools: Dict[str, callable] | None = None,
-        system: str | None = None,
         model_params: Dict[str, Any] = {},
-        **kwargs,
     ):
         """
         Generates a response using the LLM, dynamically integrating tools.
@@ -111,14 +111,14 @@ class GPTModel(BaseLLMModel):
             str: The model's response or tool execution result.
         """
         # try:
-        if tools and structure:
+        if tools and model_params.get("structure"):
             raise Warning(
                 "Tool calling with structured output is currently incompatible!"
             )
 
-        if structure:
+        if model_params.get("structure"):
             completion = self._model.responses.parse(
-                model=model_name, messages=prompt, text_format=structure, **kwargs
+                model=model_params.get("model"), messages=model_params.get("prompt"), text_format=model_params.get("structure"), **model_params
             )
             return LLMResponse(
                 response=GPTResponse(response_message=completion.choices[0].message)
@@ -126,11 +126,7 @@ class GPTModel(BaseLLMModel):
         if tools:
             openai_tools = ToolUtility.get_tools_info_gpt(tools)
             completion = self._model.responses.create(
-                model=model_name,
-                instructions=system,
-                input=prompt,
-                tools=openai_tools if tools else None,
-                tool_choice="required",
+                tools =openai_tools,
                 **model_params,
             )
             # Return the full completion object for tool execution
@@ -142,9 +138,6 @@ class GPTModel(BaseLLMModel):
 
         else:
             completion = self._model.responses.create(
-                model=model_name,
-                instructions=system,
-                input=prompt,
                 **model_params,
             )
 
@@ -162,10 +155,7 @@ class AnthropicModel(BaseLLMModel):
     @override
     def generate(
         self,
-        model_name: str,
-        prompt,
-        tools,
-        system,
+        tools: Dict[str, callable] | None = None,
         model_params: Dict[str, Any] = {},
     ):
 
@@ -175,11 +165,7 @@ class AnthropicModel(BaseLLMModel):
         if tools:
             anthropic_tools = ToolUtility.get_tools_info_anthropic(tools=tools)
             message = self._model.messages.create(
-                model=model_name,
-                messages=prompt,
-                system=system,
                 tools=anthropic_tools,
-                max_tokens= model_params.get("max_tokens", 200),
                 **model_params,
             )
             return LLMToolResponse(
@@ -187,15 +173,10 @@ class AnthropicModel(BaseLLMModel):
             )
         else:
             message = self._model.messages.create(
-                model=model_name,
-                messages=prompt,
-                system=system,
-                max_tokens= model_params.get("max_tokens", 200),
                 **model_params,
             )
 
             return LLMResponse(response=AnthropicResponse(response_message=message))
-
 
 # -------------------------------------------------
 # 6. LLMFactory to create model instances on demand
@@ -203,8 +184,15 @@ class AnthropicModel(BaseLLMModel):
 
 
 def create_model(model_type: str, *args, **kwargs) -> LLMModel:
-
-    loader = ModelLoader.load_model(model_type=model_type, *args, **kwargs)
+    
+    custom_model = kwargs.get("custom_model")
+    custom_implementation = kwargs.get("custom_implementation")
+    loader = ModelLoader.load_model(
+        model_type=model_type, 
+        custom_implementation=custom_implementation,
+        *args, 
+        **kwargs
+    )
 
     if model_type == "openai":
         return GPTModel(loader)
@@ -212,3 +200,7 @@ def create_model(model_type: str, *args, **kwargs) -> LLMModel:
         return DeepSeekModel(loader)
     elif model_type == "anthropic":
         return AnthropicModel(loader)
+    elif model_type == "custom":
+        if custom_model is None or not custom_implementation:
+            raise CustomModelError("custom_model and custom_implementation must be provided for custom model type")
+        return custom_model(loader)

@@ -10,7 +10,13 @@ def get_result_sum(val1: int,val2: int):
     return val1+val2
 
 def get_sum(agent):
-    result = agent.action(system = "You are an helpful assistant that uses his tools at their disposal", prompt= [{"role": "user", "content":"Use the get_result_sum tool to sum 300+140"}], use_model="claude-sonnet-4-5" ,model_params={"temperature":0.8})
+    model_params = {
+        "model": "claude-sonnet-4-5",
+        "messages": [{"role": "user", "content": "Use the get_result_sum tool to sum 300+140"}],
+        "system": "You are an helpful assistant that uses his tools at their disposal",
+        "max_tokens": 200,
+    }
+    result = agent.action(model_params=model_params)
 
     # Access the global agent state to see what agents have done
     global_state = get_global_agent_state()
@@ -28,10 +34,13 @@ def search_internet():
 def test_router(agent):
     global_state = get_global_agent_state()
 
-    system = "You are an agent router and you decide which node to travel to next based on the task and results thus far. You have to decide the sequence of nodes to travel to based on based on this objective: get sum, then divide and search on the internet."
-    prompt = [{"role": "user", "content": f"You have the following nodes at your disposal: get_division, search_internet, get_sum, end. These are the results thus far: {global_state.history}. Your next answer must only return the node name. NEXT NODE NAME:"}]
-
-    result = agent.action(system=system, prompt=prompt, use_model="claude-sonnet-4-5")
+    model_params = {
+        "model": "claude-sonnet-4-5",
+        "messages": [{"role": "user", "content": f"You have the following nodes at your disposal: get_division, search_internet, get_sum, end. These are the results thus far: {global_state.history}. Your next answer must only return the node name. NEXT NODE NAME:"}],
+        "system": "You are an agent router and you decide which node to travel to next based on the task and results thus far. You have to decide the sequence of nodes to travel to based on based on this objective: get sum, then divide and search on the internet.",
+        "max_tokens": 1024
+    }
+    result = agent.action(model_params=model_params)
 
     # You can also access global state here to see all agent activities
     #print(f"Router agent executed. Total agent actions: {len(global_state.history)}")
@@ -44,7 +53,7 @@ if __name__ == "__main__":
     # Reset global state at the beginning (optional, good for testing)
     reset_global_agent_state()
 
-    model = create_model(model_type="anthropic",api_key = os.getenv('ANTHROPIC_API_KEY'))
+    model = create_model(model_type="anthropic",instance_params={"api_key": os.getenv('ANTHROPIC_API_KEY')})
 
 
     tool_agent = LLMAgent(name="tool_agent", llm_model= model, tools = [get_result_sum])
