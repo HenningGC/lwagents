@@ -6,7 +6,6 @@ import openai
 from dotenv import load_dotenv
 from openai import OpenAI
 import anthropic
-from pydantic import BaseModel
 from typing_extensions import Self, override
 import json
 from .tools import ToolUtility

@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 from pydantic import BaseModel, Field, SkipValidation
 from typing_extensions import Self, override
 
-from .agent import LLMAgent
 from .state import GraphState
 
 
@@ -151,6 +150,30 @@ class Graph(BaseGraph):
             List[Tuple[Node, Edge]]: A list of connected nodes and their edges.
         """
         return self._graphDict.get(node, [])
+    
+    def get_start_node(self) -> Optional[Node]:
+        """
+        Retrieves the start node of the graph.
+
+        Returns:
+            Optional[Node]: The start node if found, else None.
+        """
+        for node in self._graphDict.keys():
+            if node.kind == NodeKind.START:
+                return node
+        return None
+    
+    def get_terminal_node(self) -> Optional[Node]:
+        """
+        Retrieves the terminal node of the graph.
+
+        Returns:
+            Optional[Node]: The terminal node if found, else None.
+        """
+        for node in self._graphDict.keys():
+            if node.kind == NodeKind.TERMINAL:
+                return node
+        return None
 
     def construct_graph(
         self,

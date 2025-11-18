@@ -2,12 +2,14 @@ import json
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
-from typing_extensions import Self, override
+from typing_extensions import Literal, Self, override
+
+from lwagents.graph import Graph
 
 from .messages import LLMAgentResponse, LLMToolResponse
-from .state import AgentState, State, get_global_agent_state
+from .state import AgentState, GraphState, State, get_global_agent_state
 from .tools import Tool, ToolUtility, ToolsExecutionResults
+from ._types import ExecutionMode, StepResult
 
 
 class InvalidAgent(Exception):
@@ -98,6 +100,44 @@ class LLMAgent(Agent):
         self.update_global_state(name=self.name, action_result=result.content)
 
         return result
+    
+    def multi_step_action(
+        self,
+        steps: List[Dict[str, Any]],
+        model_params: Dict[str, Any] = {},
+        mode: ExecutionMode = ExecutionMode.CHAIN,
+        graph: Graph = None,
+        *args,
+        **kwargs
+    ) -> List[LLMAgentResponse]:
+        responses = []
+        if mode == ExecutionMode.CHAIN:
+            for step in steps:
+                response = self.action(
+                    state_entry=step.get("state_entry", {}),
+                    model_params={**model_params, **step.get("model_params", {})},
+                )
+                responses.append(StepResult(step=step.get("step", ""), response=response))
+        elif mode == ExecutionMode.GRAPH:
+            # For parallel execution, we can use threading or async calls.
+            # Here, we'll simulate parallel execution with a simple loop for demonstration.
+            if graph is None:
+                raise ValueError("Graph must be provided for GRAPH execution mode.")
+            graph.run(
+                start_node=graph.get_start_node(),
+                streaming=kwargs.get("streaming", False),
+            )
+            # Collect responses from graph execution
+            for step in steps:
+                response = self.action(
+                    state_entry=step.get("state_entry", {}),
+                    model_params={**model_params, **step.get("model_params", {})},
+                )
+                responses.append(StepResult(step=step.get("step", ""), response=response))
+        else:
+            raise ValueError(f"Invalid execution mode: {mode}")
+        
+        return responses
 
     def update_state(self, *args, **kwargs):
         self.state.update_state(*args, **kwargs)
