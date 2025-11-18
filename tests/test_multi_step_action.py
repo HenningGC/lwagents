@@ -7,7 +7,8 @@ from lwagents.tools import Tool
 from lwagents.agent import LLMAgent
 from lwagents.models import create_model
 from lwagents._types import ExecutionMode, StepResult
-from lwagents.state import AgentState, get_global_agent_state, reset_global_agent_state
+from lwagents.state import AgentState, GraphState, get_global_agent_state, reset_global_agent_state
+from lwagents.graph import Graph, Node, Edge, GraphRequest
 from dotenv import load_dotenv
 import os
 
@@ -333,18 +334,396 @@ def test_sequential_multi_step_with_state_entry():
     return results
 
 
+def test_graph_execution_basic():
+    """Test graph execution mode with a simple linear graph."""
+    print("\n=== Test 6: Graph Execution Mode - Basic ===")
+    
+    load_dotenv()
+    reset_global_agent_state()
+    
+    # Create model and agent
+    gpt_model = create_model(
+        model_type="openai",
+        instance_params={"api_key": os.getenv("OPENAI_API_KEY")}
+    )
+    
+    agent = LLMAgent(
+        name="graph_agent",
+        llm_model=gpt_model,
+        tools=[add_numbers],
+        state=AgentState()
+    )
+    
+    # Define node commands
+    def step1_command(agent):
+        model_params = {
+            "model": "gpt-4o-mini",
+            "instructions": "You are a helpful assistant.",
+            "input": [
+                {"role": "user", "content": "Use add_numbers tool to add 5 and 10"}
+            ]
+        }
+        result = agent.action(model_params=model_params)
+        print(f"  Step 1 executed: {result.content}")
+        return result
+    
+    def step2_command(agent):
+        model_params = {
+            "model": "gpt-4o-mini",
+            "instructions": "You are a helpful assistant.",
+            "input": [
+                {"role": "user", "content": "Use add_numbers tool to add 20 and 30"}
+            ]
+        }
+        result = agent.action(model_params=model_params)
+        print(f"  Step 2 executed: {result.content}")
+        return result
+    
+    # Create graph
+    graph_state = GraphState()
+    
+    with Graph(state=graph_state) as graph:
+        start_node = Node(
+            node_name="start",
+            kind="START",
+            command=step1_command,
+            parameters={"agent": agent}
+        )
+        
+        process_node = Node(
+            node_name="process",
+            kind="STATE",
+            command=step2_command,
+            parameters={"agent": agent}
+        )
+        
+        end_node = Node(
+            node_name="end",
+            kind="TERMINAL"
+        )
+        
+        edge = Edge(edge_name="default", condition=None)
+        
+        start_node.connect(to_node=process_node, edge=edge)
+        process_node.connect(to_node=end_node, edge=edge)
+        
+        # Execute in graph mode
+        results = agent.multi_step_action(
+            mode=ExecutionMode.GRAPH,
+            graph=graph,
+            streaming=True
+        )
+        
+        print(f"✓ Graph execution completed with {len(results)} results")
+        
+        # Check graph state
+        print(f"✓ Graph state has {len(graph_state.history)} entries")
+        
+    return results
+
+
+def test_graph_execution_with_router():
+    """Test graph execution mode with a router pattern."""
+    print("\n=== Test 7: Graph Execution Mode - Router Pattern ===")
+    
+    load_dotenv()
+    reset_global_agent_state()
+    
+    # Create models and agents
+    gpt_model = create_model(
+        model_type="openai",
+        instance_params={"api_key": os.getenv("OPENAI_API_KEY")}
+    )
+    
+    tool_agent = LLMAgent(
+        name="tool_agent",
+        llm_model=gpt_model,
+        tools=[add_numbers, multiply_numbers],
+        state=AgentState()
+    )
+    
+    router_agent = LLMAgent(
+        name="router_agent",
+        llm_model=gpt_model,
+        state=AgentState()
+    )
+    
+    # Define node commands
+    execution_count = {"count": 0}
+    
+    def router_command(agent):
+        execution_count["count"] += 1
+        count = execution_count["count"]
+        
+        if count == 1:
+            next_node = "add_task"
+        elif count == 2:
+            next_node = "multiply_task"
+        else:
+            next_node = "end"
+        
+        print(f"  Router deciding: going to {next_node}")
+        return GraphRequest(result=f"Routing to {next_node}", traversal=next_node)
+    
+    def add_command(agent):
+        model_params = {
+            "model": "gpt-4o-mini",
+            "instructions": "You are a helpful math assistant.",
+            "input": [
+                {"role": "user", "content": "Use add_numbers to add 100 and 200"}
+            ]
+        }
+        result = agent.action(model_params=model_params)
+        print(f"  Addition task: {result.content}")
+        return result
+    
+    def multiply_command(agent):
+        model_params = {
+            "model": "gpt-4o-mini",
+            "instructions": "You are a helpful math assistant.",
+            "input": [
+                {"role": "user", "content": "Use multiply_numbers to multiply 7 and 8"}
+            ]
+        }
+        result = agent.action(model_params=model_params)
+        print(f"  Multiplication task: {result.content}")
+        return result
+    
+    # Create graph with router pattern
+    graph_state = GraphState()
+    
+    with Graph(state=graph_state) as graph:
+        router_node = Node(
+            node_name="router",
+            kind="START",
+            command=router_command,
+            parameters={"agent": router_agent}
+        )
+        
+        add_node = Node(
+            node_name="add_task",
+            kind="STATE",
+            command=add_command,
+            parameters={"agent": tool_agent}
+        )
+        
+        multiply_node = Node(
+            node_name="multiply_task",
+            kind="STATE",
+            command=multiply_command,
+            parameters={"agent": tool_agent}
+        )
+        
+        end_node = Node(
+            node_name="end",
+            kind="TERMINAL"
+        )
+        
+        edge = Edge(edge_name="route", condition=None)
+        
+        # Connect router to all possible destinations
+        router_node.connect(to_node=add_node, edge=edge)
+        router_node.connect(to_node=multiply_node, edge=edge)
+        router_node.connect(to_node=end_node, edge=edge)
+        
+        # Connect tasks back to router
+        add_node.connect(to_node=router_node, edge=edge)
+        multiply_node.connect(to_node=router_node, edge=edge)
+        
+        # Define steps
+        steps = [
+            {"step": "route_and_execute_1"},
+            {"step": "route_and_execute_2"}
+        ]
+        
+        # Execute in graph mode
+        results = tool_agent.multi_step_action(
+            steps=steps,
+            mode=ExecutionMode.GRAPH,
+            graph=graph,
+            streaming=True
+        )
+        
+        print(f"✓ Router graph execution completed")
+        print(f"✓ Graph state has {len(graph_state.history)} entries")
+        
+        # Print graph history
+        print("\n  Graph execution history:")
+        for i, entry in enumerate(graph_state.history, 1):
+            print(f"    {i}. {entry.get('node_name')} -> {entry.get('transition')}")
+    
+    return results
+
+
+def test_graph_execution_with_conditions():
+    """Test graph execution mode with conditional edges."""
+    print("\n=== Test 8: Graph Execution Mode - Conditional Edges ===")
+    
+    load_dotenv()
+    reset_global_agent_state()
+    
+    gpt_model = create_model(
+        model_type="openai",
+        instance_params={"api_key": os.getenv("OPENAI_API_KEY")}
+    )
+    
+    agent = LLMAgent(
+        name="conditional_agent",
+        llm_model=gpt_model,
+        tools=[add_numbers],
+        state=AgentState()
+    )
+    
+    # Track execution path
+    execution_path = []
+    
+    def start_command():
+        execution_path.append("start")
+        print("  Start node executed")
+        return "started"
+    
+    def task_a_command(agent):
+        execution_path.append("task_a")
+        model_params = {
+            "model": "gpt-4o-mini",
+            "instructions": "You are a helpful assistant.",
+            "input": [
+                {"role": "user", "content": "Use add_numbers to add 1 and 1"}
+            ]
+        }
+        result = agent.action(model_params=model_params)
+        print(f"  Task A executed: {result.content}")
+        return result
+    
+    def task_b_command():
+        execution_path.append("task_b")
+        print("  Task B executed")
+        return "task_b_result"
+    
+    # Condition functions
+    def go_to_task_a():
+        print("  Condition: Going to Task A")
+        return True
+    
+    def go_to_task_b():
+        print("  Condition: Going to Task B")
+        return False  # This won't be taken
+    
+    # Create graph
+    graph_state = GraphState()
+    
+    with Graph(state=graph_state) as graph:
+        start_node = Node(
+            node_name="start",
+            kind="START",
+            command=start_command
+        )
+        
+        task_a_node = Node(
+            node_name="task_a",
+            kind="STATE",
+            command=task_a_command,
+            parameters={"agent": agent}
+        )
+        
+        task_b_node = Node(
+            node_name="task_b",
+            kind="STATE",
+            command=task_b_command
+        )
+        
+        end_node = Node(
+            node_name="end",
+            kind="TERMINAL"
+        )
+        
+        edge_to_a = Edge(edge_name="to_task_a", condition=go_to_task_a)
+        edge_to_b = Edge(edge_name="to_task_b", condition=go_to_task_b)
+        edge_to_end = Edge(edge_name="to_end", condition=None)
+        
+        start_node.connect(to_node=task_a_node, edge=edge_to_a)
+        start_node.connect(to_node=task_b_node, edge=edge_to_b)
+        task_a_node.connect(to_node=end_node, edge=edge_to_end)
+        task_b_node.connect(to_node=end_node, edge=edge_to_end)
+        
+        steps = [{"step": "conditional_execution"}]
+        
+        results = agent.multi_step_action(
+            steps=steps,
+            mode=ExecutionMode.GRAPH,
+            graph=graph,
+            streaming=True
+        )
+        
+        print(f"✓ Conditional graph executed")
+        print(f"  Execution path: {' -> '.join(execution_path)}")
+        assert "task_a" in execution_path, "Task A should have been executed"
+        print(f"✓ Correct path taken based on conditions")
+    
+    return results
+
+
+def test_graph_execution_error_handling():
+    """Test that graph mode raises error when graph is not provided."""
+    print("\n=== Test 9: Graph Execution Mode - Error Handling ===")
+    
+    load_dotenv()
+    reset_global_agent_state()
+    
+    gpt_model = create_model(
+        model_type="openai",
+        instance_params={"api_key": os.getenv("OPENAI_API_KEY")}
+    )
+    
+    agent = LLMAgent(
+        name="error_agent",
+        llm_model=gpt_model,
+        state=AgentState()
+    )
+    
+    steps = [{"step": "test_step"}]
+    
+    try:
+        # Try to execute in graph mode without providing a graph
+        results = agent.multi_step_action(
+            steps=steps,
+            mode=ExecutionMode.GRAPH,
+            graph=None  # This should raise an error
+        )
+        print("✗ Should have raised ValueError")
+        assert False, "Expected ValueError to be raised"
+    except ValueError as e:
+        print(f"✓ Correctly raised ValueError: {e}")
+        assert "Graph must be provided" in str(e)
+    
+    return None
+
+
 def run_all_tests():
     """Run all test cases."""
     print("=" * 60)
-    print("Running Multi-Step Action Sequential Execution Tests")
+    print("Running Multi-Step Action Tests")
     print("=" * 60)
     
     try:
-        #test_sequential_multi_step_basic()
+        # Sequential execution tests
+        print("\n" + "=" * 60)
+        print("SEQUENTIAL EXECUTION MODE TESTS")
+        print("=" * 60)
+        test_sequential_multi_step_basic()
         test_sequential_multi_step_with_tools()
-        # test_sequential_multi_step_with_context_passing()
-        # test_sequential_multi_step_empty_steps()
-        # test_sequential_multi_step_with_state_entry()
+        test_sequential_multi_step_with_context_passing()
+        test_sequential_multi_step_empty_steps()
+        test_sequential_multi_step_with_state_entry()
+        
+        # Graph execution tests
+        print("\n" + "=" * 60)
+        print("GRAPH EXECUTION MODE TESTS")
+        print("=" * 60)
+        test_graph_execution_basic()
+        test_graph_execution_with_router()
+        test_graph_execution_with_conditions()
+        test_graph_execution_error_handling()
         
         print("\n" + "=" * 60)
         print("✓ All tests passed successfully!")
@@ -352,6 +731,8 @@ def run_all_tests():
         
     except Exception as e:
         print(f"\n✗ Test failed with error: {e}")
+        import traceback
+        traceback.print_exc()
         raise
 
 

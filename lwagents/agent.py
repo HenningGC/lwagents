@@ -103,7 +103,7 @@ class LLMAgent(Agent):
     
     def multi_step_action(
         self,
-        steps: List[Dict[str, Any]],
+        steps: List[Dict[str, Any]] = [],
         model_params: Dict[str, Any] = {},
         mode: ExecutionMode = ExecutionMode.CHAIN,
         graph: Graph = None,
@@ -119,21 +119,14 @@ class LLMAgent(Agent):
                 )
                 responses.append(StepResult(step=step.get("step", ""), response=response))
         elif mode == ExecutionMode.GRAPH:
-            # For parallel execution, we can use threading or async calls.
-            # Here, we'll simulate parallel execution with a simple loop for demonstration.
             if graph is None:
                 raise ValueError("Graph must be provided for GRAPH execution mode.")
+            if steps:
+                Warning("Steps are ignored in GRAPH execution mode.")
             graph.run(
                 start_node=graph.get_start_node(),
                 streaming=kwargs.get("streaming", False),
             )
-            # Collect responses from graph execution
-            for step in steps:
-                response = self.action(
-                    state_entry=step.get("state_entry", {}),
-                    model_params={**model_params, **step.get("model_params", {})},
-                )
-                responses.append(StepResult(step=step.get("step", ""), response=response))
         else:
             raise ValueError(f"Invalid execution mode: {mode}")
         

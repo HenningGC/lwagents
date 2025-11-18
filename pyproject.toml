@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lwagents"
-version = "0.1.0"
+version = "2.2.0"
 description = "A lightweight library for building graph-driven AI agents with tool integration."
 authors = [
     {name = "Henning Gruhl", email = "henning@gruhl.me"}
